@@ -1,63 +1,66 @@
-# Marketplace Delivery Orchestration Platform
+# Платформа оркестрации доставки маркетплейса
 
-> System Design portfolio project for a marketplace delivery orchestration platform.
+> Учебный System Design проект для портфолио системного аналитика.
 
-**Status:** In progress
+**Статус:** в разработке
 
-## About the project
+## О проекте
 
-This project models the design of a delivery orchestration platform for a marketplace.
+Проект посвящён проектированию платформы оркестрации доставки для маркетплейса.
 
-The platform coordinates order fulfillment across inventory, payment, warehouse, and external delivery providers while handling partial fulfillment, failures, retries, duplicate events, cancellations, and eventual consistency.
+Система должна координировать выполнение заказа между складскими системами, платёжным контуром и несколькими внешними службами доставки, учитывать частичное выполнение заказа, отмены, возвраты, сбои внешних систем и асинхронное взаимодействие между сервисами.
 
-The goal of the project is to demonstrate the complete system analysis and system design process — from requirements discovery to API and event contracts, data modeling, reliability, security, and observability.
+Цель проекта — пройти полный цикл работы системного аналитика: от discovery и формализации требований до проектирования API, модели данных, событийного взаимодействия, механизмов отказоустойчивости, безопасности и observability.
 
-> This is an educational portfolio project and does not represent a production system developed for an employer.
+> Проект является учебным и не относится к коммерческим проектам работодателя.
 
-## Business context
+## Бизнес-контекст
 
-A marketplace works with multiple warehouses and delivery providers.
+Маркетплейс работает с несколькими складами и службами доставки.
 
-A single customer order may contain items stored in different warehouses and therefore may need to be split into several shipments.
+Один заказ пользователя может содержать товары, размещённые на разных складах. В таком случае заказ может быть разделён на несколько отправлений (`Shipment`).
 
-The system must coordinate:
+При оформлении заказа система должна учитывать:
 
-- inventory reservation;
-- fulfillment planning;
-- payment;
-- shipment creation;
-- delivery provider selection;
-- cancellations and refunds;
-- partial order fulfillment;
-- failures of external systems.
+- доступность товаров;
+- резервирование остатков;
+- выбор склада;
+- выбор службы доставки;
+- доступные интервалы доставки;
+- стоимость доставки;
+- SLA;
+- оплату;
+- частичную отмену;
+- возвраты;
+- сбои внешних систем.
 
-One of the key challenges is maintaining consistent business states across independently operating services.
+Одна из основных задач — обеспечить согласованность состояний между независимыми сервисами.
 
-## Main design topics
+## Основные области проектирования
 
-The project will cover:
+В рамках проекта будут проработаны:
 
-- Requirements analysis
-- Business rules
-- Functional and non-functional requirements
-- C4 System Context and Container diagrams
-- Domain and data modeling
-- REST API and OpenAPI
-- Asynchronous communication
-- Kafka events
-- Saga pattern
-- State machines
-- Idempotency
-- Retry and DLQ strategies
-- Transactional Outbox / Inbox
-- Reconciliation
-- Authentication and authorization
-- Logging, metrics and distributed tracing
-- Failure scenarios
-- Scalability
-- Architecture Decision Records (ADR)
+- требования и бизнес-правила;
+- функциональные и нефункциональные требования;
+- C4 System Context и Container diagrams;
+- доменная модель;
+- ER-модель и структура данных;
+- REST API и OpenAPI;
+- асинхронное взаимодействие;
+- Kafka events;
+- Saga;
+- State Machine;
+- idempotency;
+- retry и DLQ;
+- Transactional Outbox / Inbox;
+- reconciliation;
+- authentication и authorization;
+- logging, metrics и distributed tracing;
+- failure scenarios;
+- масштабирование;
+- Architecture Decision Records (ADR).
 
-## Planned project structure
+## Планируемая структура проекта
 
 ```text
 docs/
