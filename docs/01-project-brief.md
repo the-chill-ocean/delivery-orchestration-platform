@@ -1,21 +1,21 @@
 # Project Brief
 
-## 1. Background
+## 1. Контекст
 
-## 2. Business Problem
+## 2. Бизнес-проблема
 
-## 3. Project Goals
+## 3. Цели проекта
 
-## 4. Stakeholders
+## 4. Заинтересованные стороны
 
-## 5. Scope
+## 5. Границы проекта
 
-### In Scope
+### Входит в scope
 
-### Out of Scope
+### Не входит в scope
 
-## 6. Constraints
+## 6. Ограничения
 
-## 7. Assumptions
+## 7. Допущения
 
-## 8. Open Questions
+## 8. Открытые вопросы
