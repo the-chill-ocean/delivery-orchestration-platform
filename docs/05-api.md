@@ -190,6 +190,17 @@ offers = []
 - `VALID` — условия не изменились;
 - `CHANGED` — стоимость, срок или другие значимые условия изменились;
 - `UNAVAILABLE` — выбранный вариант больше недоступен.
+### Response
+
+Во всех случаях API возвращает единый формат ответа.
+
+| Поле | Описание |
+|---|---|
+| `status` | Результат проверки: `VALID`, `CHANGED` или `UNAVAILABLE` |
+| `previousOfferId` | Идентификатор исходного предложения |
+| `currentOffer` | Актуальное предложение. Может быть `null`, если вариант больше недоступен |
+
+---
 
 ### Offer актуален
 
@@ -198,7 +209,8 @@ offers = []
 ```json
 {
   "status": "VALID",
-  "offer": {
+  "previousOfferId": "off-1001",
+  "currentOffer": {
     "offerId": "off-1001",
     "deliveryType": "COURIER",
     "price": {
@@ -207,30 +219,22 @@ offers = []
     },
     "estimatedDeliveryFrom": "2026-09-20",
     "estimatedDeliveryTo": "2026-09-21",
-    "validUntil": "2026-09-17T20:00:00+04:00"
+    "validUntil": "2026-09-18T14:00:00+04:00"
   }
 }
 ```
-| Поле | Описание |
-|---|---|
-| `offer` | Актуальное предложение доставки |
-| `offer.offerId` | Идентификатор предложения |
-| `offer.deliveryType` | Способ доставки: `COURIER` или `PICKUP_POINT` |
-| `offer.pickupPoint` | Информация о ПВЗ. Заполняется для доставки в пункт выдачи |
-| `offer.price` | Стоимость доставки |
-| `offer.price.amount` | Сумма стоимости доставки |
-| `offer.price.currency` | Валюта |
-| `offer.estimatedDeliveryFrom` | Минимальная ожидаемая дата доставки |
-| `offer.estimatedDeliveryTo` | Максимальная ожидаемая дата доставки |
-| `offer.validUntil` | Срок актуальности предложения |
+
+---
+
 ### Условия изменились
+
 `200 OK`
 
 ```json
 {
   "status": "CHANGED",
   "previousOfferId": "off-1001",
-  "updatedOffer": {
+  "currentOffer": {
     "offerId": "off-1002",
     "deliveryType": "COURIER",
     "price": {
@@ -239,43 +243,44 @@ offers = []
     },
     "estimatedDeliveryFrom": "2026-09-21",
     "estimatedDeliveryTo": "2026-09-22",
-    "validUntil": "2026-09-17T20:00:00+04:00"
+    "validUntil": "2026-09-18T14:00:00+04:00"
   }
 }
 ```
-Пользователь должен подтвердить обновлённые условия перед оплатой.
-| Поле | Описание |
-|---|---|
-| `previousOfferId` | Идентификатор предложения, условия которого изменились |
-| `updatedOffer` | Новое предложение с актуальными условиями |
-| `updatedOffer.offerId` | Идентификатор нового предложения |
-| `updatedOffer.deliveryType` | Способ доставки |
-| `updatedOffer.pickupPoint` | Информация о ПВЗ, если применимо |
-| `updatedOffer.price` | Новая стоимость доставки |
-| `updatedOffer.price.amount` | Новая сумма стоимости доставки |
-| `updatedOffer.price.currency` | Валюта |
-| `updatedOffer.estimatedDeliveryFrom` | Новая минимальная дата доставки |
-| `updatedOffer.estimatedDeliveryTo` | Новая максимальная дата доставки |
-| `updatedOffer.validUntil` | Срок актуальности нового предложения |
 
-`validUntil` определяет срок, до которого DeliveryOffer может быть выбран или подтверждён пользователем.
+Пользователь должен повторно подтвердить изменившиеся условия перед оплатой.
 
-После успешной проверки и подтверждения предложения перед оплатой истечение `validUntil` не удаляет DeliveryOffer и не отменяет ранее согласованные условия.
+---
 
-DeliveryOffer сохраняется как историческая запись и используется при последующем создании Delivery.
 ### Offer больше недоступен
+
 `200 OK`
 
 ```json
 {
   "status": "UNAVAILABLE",
-  "offerId": "off-1001"
+  "previousOfferId": "off-1001",
+  "currentOffer": null
 }
 ```
-| Поле | Описание |
-|---|---|
-| `offerId` | Идентификатор предложения, которое больше недоступно |
-В этом случае Checkout должен запросить новые варианты доставки.
+
+В этом случае Checkout должен выполнить новый расчёт:
+
+```text
+POST /delivery-offers
+```
+
+---
+
+### Техническая невозможность проверки
+
+Если проверить актуальность предложения невозможно из-за недоступности критичных внешних зависимостей:
+
+`503 Service Unavailable`
+
+`UNAVAILABLE` означает, что проверка успешно выполнена и вариант действительно больше недоступен.
+
+`503 Service Unavailable` означает, что платформа не смогла выполнить саму проверку.
 ## 7. Получение состояния доставки
 
 ### GET /deliveries/{deliveryId}
@@ -411,7 +416,23 @@ Delivery не удаляется из системы. В результате о
 CREATED
 ACCEPTED
 ```
+### Особенности отмены в зависимости от статуса
 
+Если `Delivery` находится в статусе `CREATED` и доставка ещё не была подтверждена Carrier, платформа может отменить Delivery внутри своей системы.
+
+Если `Delivery` находится в статусе `ACCEPTED`, обычная отмена требует взаимодействия с Carrier.
+
+Последовательность:
+
+```text
+ACCEPTED
+   ↓
+запрос отмены Carrier
+   ↓
+Carrier подтвердил отмену
+   ↓
+CANCELLED
+```
 Допустимые переходы:
 
 ```text
