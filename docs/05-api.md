@@ -257,6 +257,12 @@ offers = []
 | `updatedOffer.estimatedDeliveryFrom` | Новая минимальная дата доставки |
 | `updatedOffer.estimatedDeliveryTo` | Новая максимальная дата доставки |
 | `updatedOffer.validUntil` | Срок актуальности нового предложения |
+
+`validUntil` определяет срок, до которого DeliveryOffer может быть выбран или подтверждён пользователем.
+
+После успешной проверки и подтверждения предложения перед оплатой истечение `validUntil` не удаляет DeliveryOffer и не отменяет ранее согласованные условия.
+
+DeliveryOffer сохраняется как историческая запись и используется при последующем создании Delivery.
 ### Offer больше недоступен
 `200 OK`
 
@@ -519,3 +525,52 @@ RETURNED
 При непредвиденной ошибке платформы:
 
 `500 Internal Server Error`
+## 9. Запуск возврата
+
+### POST /deliveries/{deliveryId}/return
+
+Запускает процесс возврата Shipment, если обычная отмена Delivery уже невозможна.
+
+Операция применяется, когда Shipment уже был передан Carrier.
+
+Например:
+
+```text
+PICKED_UP
+IN_TRANSIT
+DELIVERY_FAILED
+READY_FOR_PICKUP
+```
+
+### Успешный запрос
+
+`202 Accepted`
+
+```json
+{
+  "deliveryId": "dlv-1001",
+  "status": "RETURN_IN_PROGRESS"
+}
+```
+
+`202 Accepted` используется, поскольку физический возврат выполняется асинхронно и не завершается в момент HTTP-запроса.
+
+После фактического возврата Shipment состояние изменяется:
+
+```text
+RETURN_IN_PROGRESS → RETURNED
+```
+
+### Возврат недопустим
+
+Если Delivery находится в состоянии, из которого возврат не разрешён:
+
+`409 Conflict`
+
+```json
+{
+  "code": "DELIVERY_RETURN_NOT_ALLOWED",
+  "message": "Return cannot be started in the current status",
+  "currentStatus": "DELIVERED"
+}
+```
