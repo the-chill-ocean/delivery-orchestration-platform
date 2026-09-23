@@ -65,46 +65,63 @@ API используется системой Checkout во время офор�
 
 ```json
 {
-  "offerId": "off-1002",
-  "deliveryType": "PICKUP_POINT",
-  "pickupPoint": {
-    "pickupPointId": "pvz-123",
-    "name": "ПВЗ",
-    "address": "Москва, ул. Профсоюзная, д. 10",
-    "latitude": 55.6781,
-    "longitude": 37.5623,
-    "workingHours": "09:00-21:00"
-  },
-  "price": {
-    "amount": 300,
-    "currency": "RUB"
-  },
-  "estimatedDeliveryFrom": "2026-09-21",
-  "estimatedDeliveryTo": "2026-09-22",
-  "validUntil": "2026-09-17T21:00:00+04:00"
+  "shipmentId": "shp-501",
+  "offers": [
+    {
+      "offerId": "off-1001",
+      "deliveryType": "COURIER",
+      "price": {
+        "amount": 450,
+        "currency": "RUB"
+      },
+      "estimatedDeliveryFrom": "2026-10-02",
+      "estimatedDeliveryTo": "2026-10-03",
+      "validUntil": "2026-10-01T15:00:00+03:00"
+    },
+    {
+      "offerId": "off-1002",
+      "deliveryType": "PICKUP_POINT",
+      "pickupPoint": {
+        "pickupPointId": "pvz-123",
+        "name": "ПВЗ",
+        "address": "Москва, ул. Профсоюзная, д. 10",
+        "latitude": 55.6781,
+        "longitude": 37.5623,
+        "workingHours": "09:00-21:00"
+      },
+      "price": {
+        "amount": 300,
+        "currency": "RUB"
+      },
+      "estimatedDeliveryFrom": "2026-10-03",
+      "estimatedDeliveryTo": "2026-10-04",
+      "validUntil": "2026-10-01T15:00:00+03:00"
+    }
+  ]
 }
 ```
 
 ### Поля DeliveryOffer
-
+### Поля ответа
 | Поле | Описание |
 |---|---|
-| `shipmentId` | Идентификатор отправления, для которого выполнен расчёт |
-| `offerId` | Идентификатор рассчитанного предложения |
-| `deliveryType` | Способ доставки: `COURIER` или `PICKUP_POINT` |
-| `pickupPoint` | Краткая информация о ПВЗ. Заполняется для доставки в пункт выдачи |
-| `pickupPoint.pickupPointId` | Идентификатор ПВЗ |
-| `pickupPoint.name` | Наименование ПВЗ |
-| `pickupPoint.address` | Адрес ПВЗ |
-| `pickupPoint.latitude` | Географическая широта ПВЗ |
-| `pickupPoint.longitude` | Географическая долгота ПВЗ |
-| `pickupPoint.workingHours` | Режим работы ПВЗ |
-| `price` | Стоимость доставки |
-| `price.amount` | Сумма стоимости доставки |
-| `price.currency` | Валюта стоимости доставки |
-| `estimatedDeliveryFrom` | Минимальная ожидаемая дата доставки |
-| `estimatedDeliveryTo` | Максимальная ожидаемая дата доставки |
-| `validUntil` | Дата и время, до которых предложение считается актуальным |
+| `shipmentId` | Идентификатор отправления, для которого выполнен расчёт доставки |
+| `offers` | Массив доступных вариантов доставки. Может быть пустым, если подходящие варианты отсутствуют |
+| `offers[].offerId` | Уникальный идентификатор рассчитанного предложения доставки |
+| `offers[].deliveryType` | Способ доставки: `COURIER` или `PICKUP_POINT` |
+| `offers[].pickupPoint` | Объект с информацией о пункте выдачи. Возвращается только для `PICKUP_POINT` |
+| `offers[].pickupPoint.pickupPointId` | Внутренний идентификатор пункта выдачи |
+| `offers[].pickupPoint.name` | Наименование пункта выдачи |
+| `offers[].pickupPoint.address` | Адрес пункта выдачи |
+| `offers[].pickupPoint.latitude` | Географическая широта пункта выдачи |
+| `offers[].pickupPoint.longitude` | Географическая долгота пункта выдачи |
+| `offers[].pickupPoint.workingHours` | Режим работы пункта выдачи |
+| `offers[].price` | Объект со стоимостью доставки |
+| `offers[].price.amount` | Рассчитанная стоимость доставки |
+| `offers[].price.currency` | Код валюты в формате ISO 4217, например `RUB` |
+| `offers[].estimatedDeliveryFrom` | Минимальная ожидаемая дата доставки в формате `YYYY-MM-DD` |
+| `offers[].estimatedDeliveryTo` | Максимальная ожидаемая дата доставки в формате `YYYY-MM-DD` |
+| `offers[].validUntil` | Дата и время окончания действия предложения в формате ISO 8601 |
 
 ## 3. Отсутствие доступных вариантов
 
