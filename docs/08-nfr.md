@@ -149,14 +149,7 @@ at-least-once delivery
 
 для Kafka-событий.
 
-Повторное получение:
-
-```text
-OrderReadyForDelivery
-```
-
-не должно создавать дополнительную активную Delivery для того же Shipment.
-
+Повторное получение `OrderReadyForDelivery` не должно приводить к созданию второй Delivery для того же Shipment независимо от состояния существующей доставки.
 Для критичных изменений состояния Delivery используется Transactional Outbox.
 
 ---
