@@ -301,6 +301,9 @@ UNAVAILABLE
 
 Если условия изменились, пользователь должен подтвердить новое предложение.
 
+Успешная проверка предложения не равнозначна его подтверждению пользователем. Order Service сохраняет факт выбора DeliveryOffer и время подтверждения.
+
+При последующем получении `OrderReadyForDelivery` платформа проверяет выбранное предложение, используя `deliveryOfferId` и `offerConfirmedAt`.
 ---
 
 ## 7. Создание Delivery
@@ -321,17 +324,16 @@ Delivery Orchestration
 Платформа:
 
 ```text
-1. проверяет событие на повторную обработку;
-2. получает DeliveryOffer и snapshot Shipment;
-3. создаёт Delivery и записывает DeliveryCreated
-   в Transactional Outbox в рамках одной транзакции;
-4. определяет Carrier;
-5. создаёт DeliveryAttempt с выбранным carrierId;
-6. вызывает Carrier API;
-7. сохраняет carrierDeliveryId после подтверждения Carrier;
-8. изменяет статус Delivery: CREATED → ACCEPTED.
+1. Проверяет OrderReadyForDelivery на повторную обработку.
+2. Получает DeliveryOffer и snapshot Shipment.
+3. В одной транзакции создаёт Delivery, записывает DeliveryCreated в Transactional Outbox и сохраняет внутреннее задание на оформление.
+4. Подтверждает Kafka-сообщение после успешного commit.
+5. Фоновый обработчик получает задание, определяет Carrier и создаёт DeliveryAttempt.
+6. Вызывает Carrier API.
+7. После подтверждения Carrier сохраняет carrierDeliveryId и изменяет состояние Delivery на ACCEPTED.
+8. Завершает внутреннее задание.
 ```
-
+Если обработка прерывается после подтверждения Kafka-сообщения, незавершённое задание остаётся в БД и обрабатывается повторно с учётом идемпотентности внешних операций.
 ---
 
 ## 8. Создание DeliveryAttempt
