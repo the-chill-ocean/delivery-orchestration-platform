@@ -194,15 +194,14 @@ PickupPoint представляет конкретный пункт выдач�
 | `Shipment` | 1:0..1 | `Delivery` | До выбора варианта фактической доставки может не существовать; после создания Shipment связан с одной Delivery |
 | `Carrier` | 1:N | `DeliveryOffer` | Один перевозчик может предоставить множество предложений для разных отправлений |
 | `Carrier` | 1:N | `PickupPoint` | Один перевозчик может иметь множество пунктов выдачи |
-| `Carrier` | 1:N | `Delivery` | Один перевозчик выполняет множество доставок |
-
+| `Delivery` | 1:N | `DeliveryAttempt` | Одна доставка может иметь несколько попыток выполнения |
+| `Carrier` | 1:N | `DeliveryAttempt` | Один перевозчик может выполнять множество попыток доставки |
 Дополнительно:
 
 `DeliveryOffer N:1 Carrier`
 
 `PickupPoint N:1 Carrier`
 
-`Delivery N:1 Carrier`
 
 ### 8.9. DeliveryAttempt
 
