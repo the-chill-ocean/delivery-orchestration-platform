@@ -429,6 +429,25 @@ Order Service организует взаимодействие с пользо�
 Обновление согласованных условий Delivery должно выполняться атомарно.
 
 История предыдущих попыток доставки сохраняется в `DeliveryAttempt`. Исходный `DeliveryOffer` также сохраняется для аудита.
+#### Формат события
+
+**Producer:** Order Service  
+**Consumer:** Delivery Orchestration Platform  
+**Kafka key:** `deliveryId`
+
+```json
+{
+  "eventId": "evt-10005",
+  "eventType": "DeliveryAlternativeApproved",
+  "occurredAt": "2026-09-18T17:15:00+04:00",
+  "deliveryId": "dlv-1001",
+  "orderId": "ord-501",
+  "shipmentId": "shp-501",
+  "alternativeOfferId": "off-1003"
+}
+```
+
+Событие публикуется после подтверждения пользователем альтернативного предложения и успешного выполнения необходимых платёжных операций.
 
 ### DeliveryAlternativeRejected
 
@@ -439,6 +458,40 @@ Delivery Orchestration Platform прекращает попытки оформл
 Order Service отвечает за отмену заказа и организацию возврата денежных средств, если это предусмотрено бизнес-сценарием.
 
 Повторная обработка событий подтверждения и отказа должна быть идемпотентной.
+
+#### Формат события
+
+**Producer:** Order Service  
+**Consumer:** Delivery Orchestration Platform  
+**Kafka key:** `deliveryId`
+
+```json
+{
+  "eventId": "evt-10006",
+  "eventType": "DeliveryAlternativeRejected",
+  "occurredAt": "2026-09-18T17:15:00+04:00",
+  "deliveryId": "dlv-1001",
+  "orderId": "ord-501",
+  "shipmentId": "shp-501",
+  "alternativeOfferId": "off-1003"
+}
+```
+
+Событие сообщает, что пользователь отказался от конкретного альтернативного предложения.
+
+Delivery Orchestration Platform не создаёт новый DeliveryAttempt на основании отклонённого предложения. Дальнейшие действия определяются текущим состоянием Delivery и согласованным бизнес-сценарием.
+
+### Поля событий согласования
+
+| Поле | Описание |
+|---|---|
+| `eventId` | Уникальный идентификатор события |
+| `eventType` | Тип события: `DeliveryAlternativeApproved` или `DeliveryAlternativeRejected` |
+| `occurredAt` | Дата и время возникновения события |
+| `deliveryId` | Идентификатор доставки, для которой предложены альтернативные условия |
+| `orderId` | Идентификатор связанного заказа |
+| `shipmentId` | Идентификатор отправления |
+| `alternativeOfferId` | Идентификатор альтернативного предложения, которое пользователь подтвердил или отклонил |
 ---
 # 11. Разделение ответственности
 
