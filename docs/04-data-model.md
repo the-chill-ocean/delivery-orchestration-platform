@@ -29,7 +29,7 @@ erDiagram
 
    SHIPMENT {
     string shipmentId PK
-    string orderId FK
+    string orderId
     string originLocationId
     string destinationCity
     string destinationStreet
@@ -149,21 +149,26 @@ Snapshot включает точку отправления, адрес назн
 
 ### Связь Order и Delivery
 
-Один Order может содержать несколько Shipment, каждый из которых
-может иметь не более одной Delivery.
+Один Order может содержать несколько Shipment, каждый из которых может иметь не более одной Delivery.
 
-Таким образом, концептуальная связь между Order и Delivery — 1:N.
-Она реализуется через Shipment.
+Таким образом, концептуальная связь между Order и Delivery — 1:N. Она реализуется через Shipment.
 
-Order является внешней сущностью, владельцем которой выступает
-Order Service.
+Order является внешней сущностью, владельцем которой выступает Order Service.
 
-Поле `Delivery.orderId` хранит идентификатор заказа для поиска
-и корреляции данных. Оно не является физическим внешним ключом
-к таблице Order, поскольку Delivery Orchestration Platform
-не владеет данными заказов.
+Поле `Delivery.orderId` хранит идентификатор заказа для поиска и корреляции данных. Оно не является физическим внешним ключом к таблице Order, поскольку Delivery Orchestration Platform не владеет данными заказов.
 
 Источником истины для Order остаётся Order Service.
+
+### Связь Shipment с Order
+
+При расчёте вариантов доставки `orderId` может ещё не существовать.
+
+Платформа сохраняет snapshot Shipment по `shipmentId`.
+Поле `orderId` на этом этапе допускает значение `null`.
+
+После получения события `OrderReadyForDelivery` платформа связывает ранее сохранённый Shipment с заказом.
+
+`orderId` является ссылкой на внешнюю сущность Order, а не физическим внешним ключом к локальной таблице.
 
 ### 9.2. Delivery и DeliveryAttempt
 
