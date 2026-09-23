@@ -27,7 +27,7 @@ erDiagram
         string orderId PK
     }
 
-    SHIPMENT {
+   SHIPMENT {
     string shipmentId PK
     string orderId FK
     string originLocationId
@@ -35,10 +35,15 @@ erDiagram
     string destinationStreet
     string destinationHouse
     decimal weight
-    string dimensions
+    string weightUnit
+    decimal dimensionsLength
+    decimal dimensionsWidth
+    decimal dimensionsHeight
+    string dimensionsUnit
     string contentType
     decimal declaredValue
-    }
+    string declaredValueCurrency
+}
 
     DELIVERY_OFFER {
         string offerId PK
@@ -62,6 +67,7 @@ erDiagram
         string deliveryType
         string status
         decimal price
+        string currency
         datetime estimatedDeliveryFrom
         datetime estimatedDeliveryTo
         datetime createdAt
@@ -111,6 +117,22 @@ Delivery Orchestration Platform хранит локальный snapshot пар�
 Snapshot включает точку отправления, адрес назначения, физические характеристики и объявленную ценность.
 
 Эти данные используются при последующем создании доставки без дополнительного запроса в Order Service.
+
+### Единицы измерения и валюта
+
+Платформа сохраняет физические характеристики Shipment
+вместе с единицами измерения:
+
+- `weight` и `weightUnit` — вес и единица измерения;
+- `dimensionsLength`, `dimensionsWidth`, `dimensionsHeight`
+  и `dimensionsUnit` — габариты;
+- `declaredValue` и `declaredValueCurrency` —
+  объявленная ценность и валюта.
+
+При взаимодействии с Carrier Adapter выполняет преобразование
+единиц измерения и валюты в соответствии с контрактом перевозчика.
+Конвертация валюты требует отдельно определённых правил
+и источника обменных курсов.
 
 ### 9.1. Основные связи
 
