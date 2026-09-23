@@ -7,7 +7,7 @@
 ```mermaid
 erDiagram
 
-    ORDER ||--o{ SHIPMENT : contains
+    ORDER |o--o{ SHIPMENT : contains
 
     SHIPMENT ||--o{ DELIVERY_OFFER : has
     SHIPMENT ||--o| DELIVERY : delivered_by
@@ -137,7 +137,7 @@ Snapshot включает точку отправления, адрес назн
 
 ### 9.1. Основные связи
 
-- `Order 1:N Shipment` — один заказ может быть разделён на несколько физических отправлений.
+- `Order — Shipment` — одно отправление может временно не иметь связанного Order. После создания заказа каждый Shipment связывается с одним Order. Один Order может содержать несколько Shipment.
 - `Shipment 1:N DeliveryOffer` — для одного отправления может быть рассчитано несколько вариантов доставки.
 - `Shipment 1:0..1 Delivery` — фактическая доставка появляется после выбора и подтверждения варианта доставки.
 - `DeliveryOffer 1:0..1 Delivery` — выбранное предложение может стать основой фактической доставки.
