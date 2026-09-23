@@ -72,6 +72,7 @@ erDiagram
         datetime estimatedDeliveryTo
         datetime createdAt
         datetime updatedAt
+        datetime cancelRequestedAt
     }
 
     DELIVERY_ATTEMPT {
