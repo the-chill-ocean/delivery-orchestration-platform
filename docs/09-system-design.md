@@ -95,28 +95,40 @@ flowchart LR
 
     Notification[Notification Service]
 
+    %% Пользовательский сценарий
     User --> Checkout
+    Checkout <-->|REST API| DOP
 
-    Checkout -->|REST| DOP
-
+    %% События от Order Service
     Order -->|OrderReadyForDelivery| Kafka
-    Kafka --> DOP
+    Order -->|DeliveryAlternativeApproved| Kafka
+    Order -->|DeliveryAlternativeRejected| Kafka
 
-    DOP --> DB
+    %% Получение событий платформой
+    Kafka -->|Order events| DOP
 
-    DOP -->|REST| CarrierA
-    DOP -->|REST| CarrierB
-    DOP -->|REST| CarrierC
+    %% Хранение данных
+    DOP <--> DB
 
+    %% Взаимодействие с перевозчиками
+    DOP -->|REST API| CarrierA
+    DOP -->|REST API| CarrierB
+    DOP -->|REST API| CarrierC
+
+    %% Получение статусов
     CarrierA -->|Webhook| DOP
     CarrierB -->|Webhook| DOP
     CarrierC -->|Webhook| DOP
 
+    %% События платформы
     DOP -->|DeliveryCreated| Kafka
     DOP -->|DeliveryStatusChanged| Kafka
+    DOP -->|DeliveryAlternativeApprovalRequired| Kafka
 
-    Kafka --> Order
-    Kafka --> Notification
+    %% Подписчики
+    Kafka -->|Delivery events and approval requests| Order
+    Kafka -->|DeliveryStatusChanged| Notification
+```
 ```
 
 ---
@@ -226,15 +238,15 @@ OUT_FOR_DELIVERY
 
 ### Event Publisher
 
-Отвечает за публикацию событий:
+Отвечает за надёжную публикацию событий Delivery Orchestration Platform:
 
-```text
-DeliveryCreated
-DeliveryStatusChanged
-```
+- `DeliveryCreated`;
+- `DeliveryStatusChanged`;
+- `DeliveryAlternativeApprovalRequired`.
 
 Для надёжной публикации используется Transactional Outbox.
 
+События `DeliveryAlternativeApproved` и `DeliveryAlternativeRejected` публикуются Order Service и обрабатываются Delivery Orchestration Platform.
 ---
 
 ## 5. Основной сценарий расчёта доставки
