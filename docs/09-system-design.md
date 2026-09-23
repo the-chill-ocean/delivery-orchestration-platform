@@ -311,14 +311,14 @@ Delivery Orchestration
 
 ```text
 1. проверяет событие на повторную обработку;
-2. получает DeliveryOffer и данные Shipment;
-3. создаёт Delivery;
-4. записывает событие `DeliveryCreated` в Transactional Outbox;
-5. создаёт DeliveryAttempt;
-6. выбирает Carrier;
-7. вызывает Carrier API;
-8. сохраняет `carrierDeliveryId`;
-9. после подтверждения Carrier изменяет статус Delivery: `CREATED → ACCEPTED`.
+2. получает DeliveryOffer и snapshot Shipment;
+3. создаёт Delivery и записывает DeliveryCreated
+   в Transactional Outbox в рамках одной транзакции;
+4. определяет Carrier;
+5. создаёт DeliveryAttempt с выбранным carrierId;
+6. вызывает Carrier API;
+7. сохраняет carrierDeliveryId после подтверждения Carrier;
+8. изменяет статус Delivery: CREATED → ACCEPTED.
 ```
 
 ---
