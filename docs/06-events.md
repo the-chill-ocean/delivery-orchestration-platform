@@ -361,7 +361,55 @@ docs/07-reliability.md
 
 ---
 
-# 10. Разделение ответственности
+# 10. Согласование альтернативных условий доставки
+
+Если Carrier отказался выполнять доставку, Delivery Orchestration Platform ищет альтернативного перевозчика.
+
+Если для курьерской доставки альтернативный Carrier сохраняет согласованные условия, переключение выполняется автоматически.
+
+Если изменяются условия доставки или требуется выбрать новый ПВЗ, необходимо подтверждение пользователя.
+
+### DeliveryAlternativeApprovalRequired
+
+Delivery Orchestration Platform публикует событие с предложением альтернативного варианта.
+
+**Producer:** Delivery Orchestration Platform
+
+**Consumer:** Order Service
+
+```json
+{
+  "eventId": "evt-10004",
+  "eventType": "DeliveryAlternativeApprovalRequired",
+  "occurredAt": "2026-09-18T17:00:00+04:00",
+  "deliveryId": "dlv-1001",
+  "orderId": "ord-501",
+  "shipmentId": "shp-501",
+  "alternativeOfferId": "off-1003"
+}
+```
+
+Order Service организует взаимодействие с пользователем и согласование изменившихся условий.
+
+Если изменяется стоимость, Order Service также координирует необходимые действия с Payment Service.
+
+### DeliveryAlternativeApproved
+
+После подтверждения пользователем новых условий и выполнения необходимых платёжных операций Order Service публикует `DeliveryAlternativeApproved`.
+
+Delivery Orchestration Platform получает событие и создаёт новый `DeliveryAttempt` на основании подтверждённого предложения.
+
+### DeliveryAlternativeRejected
+
+Если пользователь отказывается от альтернативного предложения, Order Service публикует `DeliveryAlternativeRejected`.
+
+Delivery Orchestration Platform прекращает попытки оформления альтернативной доставки и завершает или отменяет Delivery в соответствии с её текущим состоянием.
+
+Order Service отвечает за отмену заказа и организацию возврата денежных средств, если это предусмотрено бизнес-сценарием.
+
+Повторная обработка событий подтверждения и отказа должна быть идемпотентной.
+---
+# 11. Разделение ответственности
 
 ### Order Service
 
