@@ -630,3 +630,50 @@ RETURN_IN_PROGRESS → RETURNED
   "currentStatus": "DELIVERED"
 }
 ```
+
+### Повторный запрос возврата
+
+Операция должна быть идемпотентной.
+
+Если возврат уже запущен и Delivery находится в статусе `RETURN_IN_PROGRESS`, повторный запрос не должен инициировать ещё одну операцию возврата у Carrier.
+
+`202 Accepted`
+
+```json
+{
+  "deliveryId": "dlv-1001",
+  "status": "RETURN_IN_PROGRESS"
+}
+```
+
+Если возврат уже завершён, платформа возвращает текущее состояние доставки.
+
+`200 OK`
+
+```json
+{
+  "deliveryId": "dlv-1001",
+  "status": "RETURNED"
+}
+```
+
+### Delivery не найдена
+
+Если указанный `deliveryId` не существует:
+
+`404 Not Found`
+
+```json
+{
+  "code": "DELIVERY_NOT_FOUND",
+  "message": "Delivery not found"
+}
+```
+
+### Внутренняя ошибка
+
+При непредвиденной внутренней ошибке платформы:
+
+`500 Internal Server Error`
+
+Повторное обращение не должно создавать дублирующие операции у внешнего Carrier.
