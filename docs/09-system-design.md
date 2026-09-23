@@ -129,7 +129,6 @@ flowchart LR
     Kafka -->|Delivery events and approval requests| Order
     Kafka -->|DeliveryStatusChanged| Notification
 ```
-```
 
 ---
 
