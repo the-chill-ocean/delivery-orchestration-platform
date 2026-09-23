@@ -28,13 +28,16 @@ erDiagram
     }
 
     SHIPMENT {
-        string shipmentId PK
-        string orderId FK
-        string originLocationId
-        decimal weight
-        string dimensions
-        string contentType
-        decimal declaredValue
+    string shipmentId PK
+    string orderId FK
+    string originLocationId
+    string destinationCity
+    string destinationStreet
+    string destinationHouse
+    decimal weight
+    string dimensions
+    string contentType
+    decimal declaredValue
     }
 
     DELIVERY_OFFER {
@@ -101,6 +104,14 @@ erDiagram
         string maxDimensions
     }
 ```
+### Хранение параметров Shipment
+
+Delivery Orchestration Platform хранит локальный snapshot параметров Shipment, полученных при расчёте DeliveryOffer.
+
+Snapshot включает точку отправления, адрес назначения, физические характеристики и объявленную ценность.
+
+Эти данные используются при последующем создании доставки без дополнительного запроса в Order Service.
+
 ### 9.1. Основные связи
 
 - `Order 1:N Shipment` — один заказ может быть разделён на несколько физических отправлений.
