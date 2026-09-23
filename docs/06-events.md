@@ -396,11 +396,29 @@ Order Service организует взаимодействие с пользо�
 
 Если изменяется стоимость, Order Service также координирует необходимые действия с Payment Service.
 
+
 ### DeliveryAlternativeApproved
 
-После подтверждения пользователем новых условий и выполнения необходимых платёжных операций Order Service публикует `DeliveryAlternativeApproved`.
+После подтверждения пользователем новых условий и выполнения необходимых платёжных операций Order Service публикует событие `DeliveryAlternativeApproved`.
 
-Delivery Orchestration Platform получает событие и создаёт новый `DeliveryAttempt` на основании подтверждённого предложения.
+После получения события Delivery Orchestration Platform:
+
+1. Проверяет событие на повторную обработку.
+2. Находит соответствующие `Delivery` и альтернативный `DeliveryOffer`.
+3. Проверяет, что подтверждение относится к ожидаемому альтернативному предложению.
+4. Обновляет согласованные условия в `Delivery`:
+   - `deliveryOfferId`;
+   - `price`;
+   - `estimatedDeliveryFrom`;
+   - `estimatedDeliveryTo`;
+   - `pickupPointId`, если применяется доставка в ПВЗ.
+5. Определяет Carrier на основании подтверждённого предложения.
+6. Создаёт новый `DeliveryAttempt` с указанием `carrierId`.
+7. Отправляет запрос на создание доставки через соответствующий Carrier Adapter.
+
+Обновление согласованных условий Delivery должно выполняться атомарно.
+
+История предыдущих попыток доставки сохраняется в `DeliveryAttempt`. Исходный `DeliveryOffer` также сохраняется для аудита.
 
 ### DeliveryAlternativeRejected
 
