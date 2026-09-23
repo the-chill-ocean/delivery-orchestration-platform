@@ -78,10 +78,11 @@ Kafka
 {
   "eventId": "evt-10001",
   "eventType": "OrderReadyForDelivery",
-  "occurredAt": "2026-09-18T12:30:00+04:00",
+  "occurredAt": "2026-09-24T12:30:00+04:00",
   "orderId": "ord-501",
   "shipmentId": "shp-501",
-  "deliveryOfferId": "off-1001"
+  "deliveryOfferId": "off-1001",
+  "offerConfirmedAt": "2026-09-24T11:15:00+04:00"
 }
 ```
 
@@ -95,6 +96,22 @@ Kafka
 | `orderId` | Идентификатор заказа |
 | `shipmentId` | Идентификатор отправления |
 | `deliveryOfferId` | Идентификатор выбранного предложения доставки |
+| `offerConfirmedAt` | Дата и время подтверждения пользователем выбранного DeliveryOffer, зафиксированные Order Service |
+
+### Проверка подтверждённого предложения
+
+Order Service публикует `OrderReadyForDelivery` только для Shipment, у которого есть подтверждённое пользователем предложение доставки и выполнены необходимые условия оформления заказа.
+
+При получении события Delivery Orchestration Platform:
+
+1. Находит сохранённый DeliveryOffer по `deliveryOfferId`.
+2. Проверяет принадлежность предложения указанному `shipmentId`.
+3. Проверяет, что `offerConfirmedAt` не превышает `validUntil` соответствующего предложения.
+4. Использует сохранённые условия DeliveryOffer для создания Delivery.
+
+Если проверка не пройдена, платформа не создаёт Delivery. Ошибка фиксируется для последующего разбора.
+
+Истечение `validUntil` после подтверждения предложения не отменяет согласованные условия доставки.
 
 Delivery Orchestration Platform получает согласованные условия доставки из ранее сохранённого `DeliveryOffer`.
 
