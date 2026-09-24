@@ -1,0 +1,886 @@
+openapi: 3.0.3
+info:
+  title: Delivery Orchestration Platform API
+  version: 1.0.0
+  description: |
+    REST API платформы оркестрации доставки маркетплейса.
+
+    Спецификация формализует контракты, описанные в `docs/05-api.md`:
+    расчёт вариантов доставки, повторную проверку DeliveryOffer,
+    получение состояния Delivery, отмену и запуск возврата.
+
+    API предназначен для внутренних сервисов маркетплейса.
+
+tags:
+  - name: Delivery Offers
+    description: Расчёт и повторная проверка вариантов доставки.
+  - name: Deliveries
+    description: Получение состояния и управление жизненным циклом Delivery.
+
+security:
+  - serviceBearerAuth: []
+
+paths:
+  /delivery-offers:
+    post:
+      tags:
+        - Delivery Offers
+      summary: Рассчитать варианты доставки
+      operationId: calculateDeliveryOffers
+      description: |
+        Рассчитывает доступные варианты доставки для конкретного Shipment.
+        Платформа использует параметры отправления и адрес назначения,
+        определяет подходящих Carrier, получает тарифы и сроки и возвращает
+        нормализованный список DeliveryOffer.
+
+        Для поиска ПВЗ адрес назначения используется как центр поиска,
+        а радиус задаётся конфигурацией платформы и не передаётся в API.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalculateDeliveryOffersRequest'
+            example:
+              shipmentId: shp-501
+              originLocationId: warehouse-12
+              destination:
+                city: Москва
+                street: Ленинский проспект
+                house: '10'
+              weight:
+                value: 5.2
+                unit: KG
+              dimensions:
+                length: 40
+                width: 30
+                height: 20
+                unit: CM
+              contentType: ELECTRONICS
+              declaredValue:
+                amount: 85000
+                currency: RUB
+      responses:
+        '200':
+          description: Расчёт успешно выполнен. Массив offers может быть пустым.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryOffersResponse'
+              examples:
+                offersAvailable:
+                  summary: Доступны варианты доставки
+                  value:
+                    shipmentId: shp-501
+                    offers:
+                      - offerId: off-1001
+                        deliveryType: COURIER
+                        price:
+                          amount: 450
+                          currency: RUB
+                        estimatedDeliveryFrom: '2026-10-02'
+                        estimatedDeliveryTo: '2026-10-03'
+                        validUntil: '2026-10-01T15:00:00+03:00'
+                      - offerId: off-1002
+                        deliveryType: PICKUP_POINT
+                        pickupPoint:
+                          pickupPointId: pvz-123
+                          name: ПВЗ
+                          address: Москва, ул. Профсоюзная, д. 10
+                          latitude: 55.6781
+                          longitude: 37.5623
+                          workingHours: 09:00-21:00
+                        price:
+                          amount: 300
+                          currency: RUB
+                        estimatedDeliveryFrom: '2026-10-03'
+                        estimatedDeliveryTo: '2026-10-04'
+                        validUntil: '2026-10-01T15:00:00+03:00'
+                noOffers:
+                  summary: Расчёт выполнен, но доступных вариантов нет
+                  value:
+                    shipmentId: shp-501
+                    offers: []
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          description: Непредвиденная внутренняя ошибка платформы.
+        '503':
+          description: |
+            Расчёт временно невозможно выполнить из-за недоступности
+            критичных внешних зависимостей. Не используется для ситуации,
+            когда расчёт выполнен успешно, но offers пуст.
+
+  /delivery-offers/{offerId}/validate:
+    post:
+      tags:
+        - Delivery Offers
+      summary: Повторно проверить DeliveryOffer
+      operationId: validateDeliveryOffer
+      description: |
+        Проверяет актуальность ранее рассчитанного DeliveryOffer перед оплатой.
+        Успешная проверка не означает подтверждение предложения пользователем:
+        факт выбора и время подтверждения сохраняются Order Service.
+      parameters:
+        - $ref: '#/components/parameters/OfferId'
+      responses:
+        '200':
+          description: Проверка успешно выполнена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryOfferValidationResponse'
+              examples:
+                valid:
+                  summary: Условия не изменились
+                  value:
+                    status: VALID
+                    previousOfferId: off-1001
+                    currentOffer:
+                      offerId: off-1001
+                      deliveryType: COURIER
+                      price:
+                        amount: 450
+                        currency: RUB
+                      estimatedDeliveryFrom: '2026-09-20'
+                      estimatedDeliveryTo: '2026-09-21'
+                      validUntil: '2026-09-18T14:00:00+04:00'
+                changed:
+                  summary: Условия изменились
+                  value:
+                    status: CHANGED
+                    previousOfferId: off-1001
+                    currentOffer:
+                      offerId: off-1002
+                      deliveryType: COURIER
+                      price:
+                        amount: 500
+                        currency: RUB
+                      estimatedDeliveryFrom: '2026-09-21'
+                      estimatedDeliveryTo: '2026-09-22'
+                      validUntil: '2026-09-18T14:00:00+04:00'
+                unavailable:
+                  summary: Предложение больше недоступно
+                  value:
+                    status: UNAVAILABLE
+                    previousOfferId: off-1001
+                    currentOffer: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          description: |
+            Платформа не смогла выполнить проверку из-за временной
+            недоступности критичных внешних зависимостей.
+
+  /deliveries/{deliveryId}:
+    get:
+      tags:
+        - Deliveries
+      summary: Получить состояние доставки
+      operationId: getDelivery
+      description: Возвращает текущее состояние ранее созданной Delivery.
+      parameters:
+        - $ref: '#/components/parameters/DeliveryId'
+      responses:
+        '200':
+          description: Delivery найдена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Delivery'
+              examples:
+                courier:
+                  summary: Курьерская доставка
+                  value:
+                    deliveryId: dlv-1001
+                    orderId: ord-501
+                    shipmentId: shp-501
+                    deliveryOfferId: off-1001
+                    deliveryType: COURIER
+                    status: IN_TRANSIT
+                    cancellationPending: false
+                    price:
+                      amount: 450
+                      currency: RUB
+                    estimatedDeliveryFrom: '2026-09-20'
+                    estimatedDeliveryTo: '2026-09-21'
+                    createdAt: '2026-09-17T15:30:00+04:00'
+                    updatedAt: '2026-09-18T10:15:00+04:00'
+                pickupPoint:
+                  summary: Доставка в ПВЗ
+                  value:
+                    deliveryId: dlv-1002
+                    orderId: ord-502
+                    shipmentId: shp-502
+                    deliveryOfferId: off-1002
+                    deliveryType: PICKUP_POINT
+                    pickupPointId: pvz-123
+                    status: READY_FOR_PICKUP
+                    cancellationPending: false
+                    price:
+                      amount: 300
+                      currency: RUB
+                    estimatedDeliveryFrom: '2026-09-20'
+                    estimatedDeliveryTo: '2026-09-21'
+                    createdAt: '2026-09-17T16:00:00+04:00'
+                    updatedAt: '2026-09-20T12:40:00+04:00'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/DeliveryNotFound'
+        '500':
+          description: Непредвиденная внутренняя ошибка платформы.
+
+  /deliveries/{deliveryId}/cancel:
+    post:
+      tags:
+        - Deliveries
+      summary: Отменить доставку
+      operationId: cancelDelivery
+      description: |
+        Отменяет Delivery, если её текущее состояние допускает обычную отмену.
+        Обычная отмена предусмотрена для CREATED и ACCEPTED.
+        После передачи Shipment перевозчику используется сценарий возврата.
+      parameters:
+        - $ref: '#/components/parameters/DeliveryId'
+      responses:
+        '200':
+          description: Delivery отменена или уже находилась в состоянии CANCELLED.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelDeliveryCompletedResponse'
+              example:
+                deliveryId: dlv-1001
+                status: CANCELLED
+                updatedAt: '2026-09-17T20:30:00+04:00'
+        '202':
+          description: |
+            Запрос на отмену принят, но оформление у Carrier уже выполняется
+            и фактический результат отмены ещё не подтверждён.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelDeliveryPendingResponse'
+              example:
+                deliveryId: dlv-1001
+                status: CREATED
+                cancellationPending: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/DeliveryNotFound'
+        '409':
+          description: Отмена недопустима в текущем состоянии Delivery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryStateConflictError'
+              example:
+                code: DELIVERY_CANCELLATION_NOT_ALLOWED
+                message: Delivery cannot be cancelled in the current status
+                currentStatus: PICKED_UP
+        '500':
+          description: Непредвиденная внутренняя ошибка платформы.
+        '503':
+          description: Результат отмены у Carrier не удалось подтвердить.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancellationStatusUnknownError'
+              example:
+                code: CANCELLATION_STATUS_UNKNOWN
+                message: Cancellation result could not be confirmed
+                deliveryId: dlv-1001
+                currentStatus: ACCEPTED
+
+  /deliveries/{deliveryId}/return:
+    post:
+      tags:
+        - Deliveries
+      summary: Запустить возврат доставки
+      operationId: startDeliveryReturn
+      description: |
+        Запускает процесс возврата Shipment, если обычная отмена уже невозможна.
+        Возврат применяется, в частности, для состояний PICKED_UP, IN_TRANSIT,
+        DELIVERY_FAILED и READY_FOR_PICKUP.
+      parameters:
+        - $ref: '#/components/parameters/DeliveryId'
+      responses:
+        '200':
+          description: Возврат уже завершён; возвращается текущее состояние.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnCompletedResponse'
+              example:
+                deliveryId: dlv-1001
+                status: RETURNED
+        '202':
+          description: |
+            Возврат запущен или уже находится в процессе. Физический возврат
+            выполняется асинхронно.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnAcceptedResponse'
+              example:
+                deliveryId: dlv-1001
+                status: RETURN_IN_PROGRESS
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/DeliveryNotFound'
+        '409':
+          description: Возврат недопустим в текущем состоянии Delivery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryStateConflictError'
+              example:
+                code: DELIVERY_RETURN_NOT_ALLOWED
+                message: Return cannot be started in the current status
+                currentStatus: DELIVERED
+        '500':
+          description: Непредвиденная внутренняя ошибка платформы.
+
+components:
+  securitySchemes:
+    serviceBearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Токен внутреннего сервиса. В проекте предполагается service-to-service
+        authentication на основе OAuth 2.0 Client Credentials или эквивалентного
+        механизма, принятого инфраструктурной платформой.
+
+  parameters:
+    OfferId:
+      name: offerId
+      in: path
+      required: true
+      description: Идентификатор DeliveryOffer.
+      schema:
+        type: string
+      example: off-1001
+
+    DeliveryId:
+      name: deliveryId
+      in: path
+      required: true
+      description: Идентификатор Delivery.
+      schema:
+        type: string
+      example: dlv-1001
+
+  responses:
+    ValidationError:
+      description: Request содержит некорректные или отсутствующие обязательные данные.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+          example:
+            code: VALIDATION_ERROR
+            message: Request validation failed
+            errors:
+              - field: originLocationId
+                message: Field is required
+              - field: destination
+                message: Field is required
+              - field: weight.value
+                message: Value must be greater than 0
+
+    Unauthorized:
+      description: Вызывающий сервис не прошёл аутентификацию.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: UNAUTHORIZED
+            message: Authentication required
+
+    Forbidden:
+      description: Вызывающий сервис не имеет прав для выполнения операции.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: FORBIDDEN
+            message: Insufficient permissions
+
+    DeliveryNotFound:
+      description: Delivery с указанным deliveryId не найдена.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: DELIVERY_NOT_FOUND
+            message: Delivery not found
+
+  schemas:
+    CalculateDeliveryOffersRequest:
+      type: object
+      required:
+        - shipmentId
+        - originLocationId
+        - destination
+        - weight
+        - dimensions
+        - contentType
+        - declaredValue
+      properties:
+        shipmentId:
+          type: string
+          description: Идентификатор Shipment.
+          example: shp-501
+        originLocationId:
+          type: string
+          description: Идентификатор точки отправления или склада.
+          example: warehouse-12
+        destination:
+          $ref: '#/components/schemas/Destination'
+        weight:
+          $ref: '#/components/schemas/Weight'
+        dimensions:
+          $ref: '#/components/schemas/Dimensions'
+        contentType:
+          type: string
+          description: Тип содержимого Shipment.
+          example: ELECTRONICS
+        declaredValue:
+          $ref: '#/components/schemas/Money'
+
+    Destination:
+      type: object
+      description: Адрес назначения.
+      required:
+        - city
+        - street
+        - house
+      properties:
+        city:
+          type: string
+          example: Москва
+        street:
+          type: string
+          example: Ленинский проспект
+        house:
+          type: string
+          example: '10'
+
+    Weight:
+      type: object
+      required:
+        - value
+        - unit
+      properties:
+        value:
+          type: number
+          format: double
+          exclusiveMinimum: true
+          minimum: 0
+          description: Вес Shipment. Значение должно быть больше нуля.
+          example: 5.2
+        unit:
+          type: string
+          description: Единица измерения веса.
+          example: KG
+
+    Dimensions:
+      type: object
+      required:
+        - length
+        - width
+        - height
+        - unit
+      properties:
+        length:
+          type: number
+          format: double
+          example: 40
+        width:
+          type: number
+          format: double
+          example: 30
+        height:
+          type: number
+          format: double
+          example: 20
+        unit:
+          type: string
+          description: Единица измерения габаритов.
+          example: CM
+
+    Money:
+      type: object
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: number
+          format: double
+          example: 450
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: Код валюты ISO 4217.
+          example: RUB
+
+    DeliveryOffersResponse:
+      type: object
+      required:
+        - shipmentId
+        - offers
+      properties:
+        shipmentId:
+          type: string
+          description: Shipment, для которого выполнен расчёт.
+          example: shp-501
+        offers:
+          type: array
+          description: Массив доступных вариантов доставки. Может быть пустым.
+          items:
+            $ref: '#/components/schemas/DeliveryOffer'
+
+    DeliveryOffer:
+      type: object
+      required:
+        - offerId
+        - deliveryType
+        - price
+        - estimatedDeliveryFrom
+        - estimatedDeliveryTo
+        - validUntil
+      properties:
+        offerId:
+          type: string
+          description: Уникальный идентификатор рассчитанного предложения.
+          example: off-1001
+        deliveryType:
+          $ref: '#/components/schemas/DeliveryType'
+        pickupPoint:
+          $ref: '#/components/schemas/PickupPointSummary'
+        price:
+          $ref: '#/components/schemas/Money'
+        estimatedDeliveryFrom:
+          type: string
+          format: date
+          description: Минимальная ожидаемая дата доставки.
+          example: '2026-10-02'
+        estimatedDeliveryTo:
+          type: string
+          format: date
+          description: Максимальная ожидаемая дата доставки.
+          example: '2026-10-03'
+        validUntil:
+          type: string
+          format: date-time
+          description: Дата и время окончания срока актуальности предложения.
+          example: '2026-10-01T15:00:00+03:00'
+
+    PickupPointSummary:
+      type: object
+      description: Информация о ПВЗ. Используется для PICKUP_POINT.
+      required:
+        - pickupPointId
+        - name
+        - address
+        - latitude
+        - longitude
+        - workingHours
+      properties:
+        pickupPointId:
+          type: string
+          example: pvz-123
+        name:
+          type: string
+          example: ПВЗ
+        address:
+          type: string
+          example: Москва, ул. Профсоюзная, д. 10
+        latitude:
+          type: number
+          format: double
+          example: 55.6781
+        longitude:
+          type: number
+          format: double
+          example: 37.5623
+        workingHours:
+          type: string
+          example: 09:00-21:00
+
+    DeliveryOfferValidationResponse:
+      type: object
+      required:
+        - status
+        - previousOfferId
+        - currentOffer
+      properties:
+        status:
+          $ref: '#/components/schemas/OfferValidationStatus'
+        previousOfferId:
+          type: string
+          description: Идентификатор исходного предложения.
+          example: off-1001
+        currentOffer:
+          description: Актуальное предложение или null, если вариант недоступен.
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/DeliveryOffer'
+
+    Delivery:
+      type: object
+      required:
+        - deliveryId
+        - orderId
+        - shipmentId
+        - deliveryOfferId
+        - deliveryType
+        - status
+        - cancellationPending
+        - price
+        - estimatedDeliveryFrom
+        - estimatedDeliveryTo
+        - createdAt
+        - updatedAt
+      properties:
+        deliveryId:
+          type: string
+          example: dlv-1001
+        orderId:
+          type: string
+          example: ord-501
+        shipmentId:
+          type: string
+          example: shp-501
+        deliveryOfferId:
+          type: string
+          example: off-1001
+        deliveryType:
+          $ref: '#/components/schemas/DeliveryType'
+        pickupPointId:
+          type: string
+          description: Заполняется для PICKUP_POINT.
+          example: pvz-123
+        status:
+          $ref: '#/components/schemas/DeliveryStatus'
+        cancellationPending:
+          type: boolean
+          description: |
+            true, если запрос на отмену принят, но окончательный результат
+            операции ещё не подтверждён.
+          example: false
+        price:
+          $ref: '#/components/schemas/Money'
+        estimatedDeliveryFrom:
+          type: string
+          format: date
+          example: '2026-09-20'
+        estimatedDeliveryTo:
+          type: string
+          format: date
+          example: '2026-09-21'
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-09-17T15:30:00+04:00'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-09-18T10:15:00+04:00'
+
+    CancelDeliveryCompletedResponse:
+      type: object
+      required:
+        - deliveryId
+        - status
+        - updatedAt
+      properties:
+        deliveryId:
+          type: string
+          example: dlv-1001
+        status:
+          type: string
+          enum:
+            - CANCELLED
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-09-17T20:30:00+04:00'
+
+    CancelDeliveryPendingResponse:
+      type: object
+      required:
+        - deliveryId
+        - status
+        - cancellationPending
+      properties:
+        deliveryId:
+          type: string
+          example: dlv-1001
+        status:
+          type: string
+          enum:
+            - CREATED
+        cancellationPending:
+          type: boolean
+          enum:
+            - true
+          example: true
+
+    ReturnAcceptedResponse:
+      type: object
+      required:
+        - deliveryId
+        - status
+      properties:
+        deliveryId:
+          type: string
+          example: dlv-1001
+        status:
+          type: string
+          enum:
+            - RETURN_IN_PROGRESS
+
+    ReturnCompletedResponse:
+      type: object
+      required:
+        - deliveryId
+        - status
+      properties:
+        deliveryId:
+          type: string
+          example: dlv-1001
+        status:
+          type: string
+          enum:
+            - RETURNED
+
+    ValidationErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+        - errors
+      properties:
+        code:
+          type: string
+          enum:
+            - VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldValidationError'
+
+    FieldValidationError:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+          example: weight.value
+        message:
+          type: string
+          example: Value must be greater than 0
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: DELIVERY_NOT_FOUND
+        message:
+          type: string
+          example: Delivery not found
+
+    DeliveryStateConflictError:
+      type: object
+      required:
+        - code
+        - message
+        - currentStatus
+      properties:
+        code:
+          type: string
+          example: DELIVERY_CANCELLATION_NOT_ALLOWED
+        message:
+          type: string
+          example: Delivery cannot be cancelled in the current status
+        currentStatus:
+          $ref: '#/components/schemas/DeliveryStatus'
+
+    CancellationStatusUnknownError:
+      type: object
+      required:
+        - code
+        - message
+        - deliveryId
+        - currentStatus
+      properties:
+        code:
+          type: string
+          enum:
+            - CANCELLATION_STATUS_UNKNOWN
+        message:
+          type: string
+          example: Cancellation result could not be confirmed
+        deliveryId:
+          type: string
+          example: dlv-1001
+        currentStatus:
+          $ref: '#/components/schemas/DeliveryStatus'
+
+    DeliveryType:
+      type: string
+      enum:
+        - COURIER
+        - PICKUP_POINT
+
+    OfferValidationStatus:
+      type: string
+      enum:
+        - VALID
+        - CHANGED
+        - UNAVAILABLE
+
+    DeliveryStatus:
+      type: string
+      enum:
+        - CREATED
+        - ACCEPTED
+        - PICKED_UP
+        - IN_TRANSIT
+        - OUT_FOR_DELIVERY
+        - READY_FOR_PICKUP
+        - DELIVERY_FAILED
+        - RETURN_IN_PROGRESS
+        - DELIVERED
+        - CANCELLED
+        - RETURNED
