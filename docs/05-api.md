@@ -189,6 +189,25 @@ offers = []
 ```text
 503 Service Unavailable
 ```
+```json
+{
+  "code": "SERVICE_UNAVAILABLE",
+  "message": "Service temporarily unavailable"
+}
+```
+
+### Внутренняя ошибка
+
+При непредвиденной внутренней ошибке платформы:
+
+`500 Internal Server Error`
+
+```json
+{
+  "code": "INTERNAL_ERROR",
+  "message": "Internal server error"
+}
+```
 
 Пустой список вариантов не должен использоваться для маскировки технической ошибки.
 
@@ -232,6 +251,7 @@ offers = []
 - `VALID` — условия не изменились;
 - `CHANGED` — стоимость, срок или другие значимые условия изменились;
 - `UNAVAILABLE` — выбранный вариант больше недоступен.
+  
 ### Response
 
 Во всех случаях API возвращает единый формат ответа.
@@ -313,12 +333,31 @@ POST /delivery-offers
 ```
 
 ---
+### DeliveryOffer не найден
+
+Если DeliveryOffer с указанным `offerId` не существует:
+
+`404 Not Found`
+
+```json
+{
+  "code": "DELIVERY_OFFER_NOT_FOUND",
+  "message": "DeliveryOffer not found"
+}
+```
+---
 
 ### Техническая невозможность проверки
 
 Если проверить актуальность предложения невозможно из-за недоступности критичных внешних зависимостей:
 
 `503 Service Unavailable`
+```json
+{
+  "code": "SERVICE_UNAVAILABLE",
+  "message": "Service temporarily unavailable"
+}
+```
 
 `UNAVAILABLE` означает, что проверка успешно выполнена и вариант действительно больше недоступен.
 
@@ -465,6 +504,13 @@ RETURNED
 При непредвиденной ошибке платформы:
 
 `500 Internal Server Error`
+
+```json
+{
+  "code": "INTERNAL_ERROR",
+  "message": "Internal server error"
+}
+```
 
 ## 8. Отмена доставки
 
@@ -665,6 +711,13 @@ RETURNED
 При непредвиденной ошибке платформы:
 
 `500 Internal Server Error`
+
+```json
+{
+  "code": "INTERNAL_ERROR",
+  "message": "Internal server error"
+}
+```
 ## 9. Запуск возврата
 
 ### POST /deliveries/{deliveryId}/return
@@ -759,6 +812,13 @@ RETURN_IN_PROGRESS → RETURNED
 При непредвиденной внутренней ошибке платформы:
 
 `500 Internal Server Error`
+
+```json
+{
+  "code": "INTERNAL_ERROR",
+  "message": "Internal server error"
+}
+```
 
 Повторное обращение не должно создавать дублирующие операции у внешнего Carrier.
 
