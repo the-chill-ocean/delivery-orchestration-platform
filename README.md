@@ -142,8 +142,10 @@ flowchart TB
 
 ## 11. OpenAPI
 
-REST API платформы формализован в спецификации OpenAPI 3.0:
+## OpenAPI
 
-[delivery-orchestration-api.yaml](openapi/delivery-orchestration-api.yaml)
+REST API платформы формализован в OpenAPI 3.0.
 
-Спецификация включает расчёт и валидацию DeliveryOffer, получение состояния Delivery, отмену и запуск возврата.
+- [Открыть Swagger UI](https://the-chill-ocean.github.io/delivery-orchestration-platform/swagger/)
+- [OpenAPI YAML](openapi/delivery-orchestration-api.yaml)
+- [Описание REST API](docs/05-api.md)
