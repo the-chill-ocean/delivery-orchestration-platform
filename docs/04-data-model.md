@@ -78,6 +78,7 @@ erDiagram
     DELIVERY_ATTEMPT {
         string deliveryAttemptId PK
         string deliveryId FK
+        string deliveryOfferId FK
         string carrierId FK
         string carrierDeliveryId
         string status
@@ -102,6 +103,7 @@ erDiagram
         string pickupPointId PK
         string carrierId FK
         string externalPickupPointId
+        string name
         string address
         decimal latitude
         decimal longitude
@@ -183,6 +185,10 @@ Order является внешней сущностью, владельцем �
 
 `DeliveryAttempt` представляет отдельную попытку выполнить эту доставку через конкретного перевозчика.
 
+Каждый DeliveryAttempt сохраняет `deliveryOfferId`, на основании которого выполнялось оформление у Carrier.
+
+Это позволяет восстановить исторические условия конкретной попытки даже после изменения `Delivery.deliveryOfferId`.
+
 Пример:
 
 `Delivery #900`
@@ -214,5 +220,17 @@ Order является внешней сущностью, владельцем �
 - `CARRIER_UNAVAILABLE`;
 - `UNSUPPORTED_DESTINATION`;
 - `WEIGHT_LIMIT_EXCEEDED`;
-- `TIMEOUT`;
+- `CARRIER_REJECTED`;
 - `INTERNAL_ERROR`.
+
+## 7. Технические таблицы
+
+ERD выше отражает основную бизнес-модель Delivery Orchestration Platform.
+
+Технические структуры, используемые для обеспечения надёжности, в основную ERD не включены:
+
+- `processed_events`;
+- `outbox`;
+- `delivery_creation_jobs`.
+
+Их назначение и правила обработки описаны в `docs/07-reliability.md`.
