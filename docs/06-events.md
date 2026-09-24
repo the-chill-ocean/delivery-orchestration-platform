@@ -408,6 +408,8 @@ Delivery Orchestration Platform публикует событие с предл�
 
 **Consumer:** Order Service
 
+**Kafka key:** `deliveryId`
+
 ```json
 {
   "eventId": "evt-10004",
@@ -418,6 +420,11 @@ Delivery Orchestration Platform публикует событие с предл�
   "shipmentId": "shp-501",
   "alternativeOfferId": "off-1003"
 }
+```
+После получения `DeliveryAlternativeApprovalRequired` Order Service использует `alternativeOfferId` для получения актуальных условий предложения через:
+
+```text
+POST /delivery-offers/{alternativeOfferId}/validate
 ```
 
 Order Service организует взаимодействие с пользователем и согласование изменившихся условий.
@@ -507,7 +514,7 @@ Delivery Orchestration Platform не создаёт новый DeliveryAttempt �
 | Поле | Описание |
 |---|---|
 | `eventId` | Уникальный идентификатор события |
-| `eventType` | Тип события: `DeliveryAlternativeApproved` или `DeliveryAlternativeRejected` |
+| `eventType` | Тип события: `DeliveryAlternativeApprovalRequired`, `DeliveryAlternativeApproved` или `DeliveryAlternativeRejected` |
 | `occurredAt` | Дата и время возникновения события |
 | `deliveryId` | Идентификатор доставки, для которой предложены альтернативные условия |
 | `orderId` | Идентификатор связанного заказа |
