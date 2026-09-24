@@ -53,8 +53,8 @@ erDiagram
         string deliveryType
         decimal price
         string currency
-        datetime estimatedDeliveryFrom
-        datetime estimatedDeliveryTo
+        date estimatedDeliveryFrom
+        date estimatedDeliveryTo
         datetime validUntil
     }
 
@@ -68,8 +68,8 @@ erDiagram
         string status
         decimal price
         string currency
-        datetime estimatedDeliveryFrom
-        datetime estimatedDeliveryTo
+        date estimatedDeliveryFrom
+        date estimatedDeliveryTo
         datetime createdAt
         datetime updatedAt
         datetime cancelRequestedAt
@@ -134,6 +134,12 @@ Snapshot включает точку отправления, адрес назн
 единиц измерения и валюты в соответствии с контрактом перевозчика.
 Конвертация валюты требует отдельно определённых правил
 и источника обменных курсов.
+
+### Типы дат доставки
+
+`estimatedDeliveryFrom` и `estimatedDeliveryTo` хранят календарные даты, поскольку определяют согласованный диапазон дней доставки.
+
+Поля `validUntil`, `createdAt`, `updatedAt` и другие технические timestamp хранят дату и время.
 
 ### 9.1. Основные связи
 
