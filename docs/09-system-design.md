@@ -1,4 +1,4 @@
-# Итоговый System Design
+# System Design
 
 Документ описывает итоговую архитектуру Delivery Orchestration Platform.
 
