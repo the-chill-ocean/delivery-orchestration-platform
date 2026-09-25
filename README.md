@@ -162,3 +162,12 @@ REST API платформы формализован в OpenAPI 3.0.
 | [Sequence — переключение Carrier](diagrams/uml/02-carrier-switch-sequence.svg) | Отказ Carrier и согласование альтернативы | [PlantUML](diagrams/uml/02-carrier-switch-sequence.puml) |
 | [Sequence — конкурентная отмена](diagrams/uml/03-cancellation-race-sequence.svg) | Race condition при отмене Delivery | [PlantUML](diagrams/uml/03-cancellation-race-sequence.puml) |
 | [State Machine — Delivery](diagrams/uml/04-delivery-state-machine.svg) | Статусы и переходы Delivery | [PlantUML](diagrams/uml/04-delivery-state-machine.puml) |
+
+## 13. Использование материалов
+
+Проект создан в учебных и портфолио-целях.
+
+© 2026 Рыбальченко Наталья. Все права защищены.
+
+Материалы репозитория не предназначены для копирования, распространения,
+модификации или использования в других проектах без разрешения автора.
