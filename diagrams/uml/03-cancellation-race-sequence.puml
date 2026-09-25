@@ -1,0 +1,135 @@
+@startuml
+title Конкурентная отмена во время создания Delivery
+
+actor "Пользователь" as User
+participant "Checkout / UI" as UI
+participant "Delivery API" as API
+database "Delivery DB" as DB
+participant "Delivery Job Worker" as Worker
+participant "Carrier Adapter" as Adapter
+participant "Carrier API" as Carrier
+participant "Reconciliation" as Reconciliation
+queue Kafka
+
+== Оформление доставки ==
+
+Worker -> DB : load Delivery\nstatus = CREATED
+
+Worker -> DB : acquire creation job\nstatus = IN_PROGRESS
+
+Worker -> DB : create DeliveryAttempt\nstatus = PENDING
+
+Worker -> Adapter : createDelivery(...)
+
+Adapter -> Carrier : POST create delivery\nIdempotency-Key: deliveryAttemptId
+
+== Пользователь запрашивает отмену ==
+
+User -> UI : Отменить доставку
+UI -> API : POST /deliveries/{deliveryId}/cancel
+
+API -> DB : load Delivery + creation job
+
+alt Запрос Carrier ещё не отправлен
+    API -> DB : block creation job
+    API -> DB : Delivery -> CANCELLED
+    API -> DB : insert DeliveryStatusChanged\ninto Outbox
+
+    API --> UI : 200 OK\nstatus=CANCELLED
+
+else Создание у Carrier уже выполняется
+    API -> DB : set cancelRequestedAt
+
+    API --> UI : 202 Accepted\nstatus=CREATED\ncancellationPending=true
+
+    note right of API
+    Запрос отмены принят,
+    но результат ещё неизвестен.
+    end note
+end
+
+== Ответ Carrier после запроса отмены ==
+
+alt Carrier подтвердил создание доставки
+    Carrier --> Adapter : success + carrierDeliveryId
+    Adapter --> Worker : success
+
+    Worker -> DB : save carrierDeliveryId
+    Worker -> DB : DeliveryAttempt -> ACCEPTED
+
+    Worker -> DB : check cancelRequestedAt
+
+    alt Отмена была запрошена
+        Worker -> Adapter : cancelDelivery(carrierDeliveryId)
+        Adapter -> Carrier : cancel delivery
+
+        alt Carrier подтвердил отмену
+            Carrier --> Adapter : cancelled
+            Adapter --> Worker : success
+
+            Worker -> DB : Delivery -> CANCELLED
+            Worker -> DB : clear cancelRequestedAt
+            Worker -> DB : insert DeliveryStatusChanged\ninto Outbox
+
+        else Carrier сообщает, что Shipment уже передан
+            Carrier --> Adapter : cancellation not allowed
+            Adapter --> Worker : current carrier status
+
+            Worker -> DB : update normalized Delivery status
+            Worker -> DB : clear cancelRequestedAt
+
+            note right of Worker
+            Обычная отмена невозможна.
+            Дальнейший сценарий —
+            возврат Shipment.
+            end note
+        end
+
+    else Отмена не запрашивалась
+        Worker -> DB : Delivery CREATED -> ACCEPTED
+        Worker -> DB : insert DeliveryStatusChanged\ninto Outbox
+    end
+
+else Carrier response = TIMEOUT
+    Carrier --> Adapter : timeout
+    Adapter --> Worker : result unknown
+
+    Worker -> DB : keep DeliveryAttempt = PENDING
+    Worker -> DB : cancellationPending remains true
+
+    Worker -> Reconciliation : determine actual carrier state
+
+    alt Доставка у Carrier существует
+        Reconciliation -> Carrier : GET delivery status
+        Carrier --> Reconciliation : delivery exists
+
+        Reconciliation -> Adapter : cancel delivery
+        Adapter -> Carrier : cancel delivery
+
+        Carrier --> Adapter : cancelled
+
+        Reconciliation -> DB : Delivery -> CANCELLED
+        Reconciliation -> DB : clear cancelRequestedAt
+        Reconciliation -> DB : DeliveryAttempt -> CANCELLED
+
+    else Подтверждено, что доставка не создана
+        Reconciliation -> DB : DeliveryAttempt -> FAILED
+        Reconciliation -> DB : Delivery -> CANCELLED
+        Reconciliation -> DB : clear cancelRequestedAt
+
+    else Результат остаётся неизвестен
+        Reconciliation -> DB : creation job -> BLOCKED
+
+        note right of DB
+        cancellationPending=true
+        сохраняется до получения
+        окончательного результата.
+        end note
+    end
+end
+
+== Публикация события ==
+
+DB --> Kafka : DeliveryStatusChanged\nчерез Transactional Outbox
+
+@enduml
