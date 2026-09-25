@@ -1,0 +1,118 @@
+@startuml
+title Переключение Carrier и согласование альтернативных условий
+
+participant "Delivery Job Worker" as Worker
+participant "Carrier Orchestrator" as Orchestrator
+database "Delivery DB" as DB
+participant "Carrier Adapter A" as AdapterA
+participant "Carrier A API" as CarrierA
+queue Kafka
+participant "Order Service" as Order
+actor "Пользователь" as User
+participant "Checkout / UI" as UI
+participant "Carrier Adapter B" as AdapterB
+participant "Carrier B API" as CarrierB
+
+Worker -> DB : load Delivery + DeliveryOffer\n+ Shipment snapshot
+
+Worker -> Orchestrator : continue delivery processing
+
+Orchestrator -> DB : create DeliveryAttempt #1\nCarrier A, status=PENDING
+
+Orchestrator -> AdapterA : createDelivery(...)
+AdapterA -> CarrierA : POST create delivery\nIdempotency-Key=deliveryAttemptId
+
+alt Carrier A подтвердил отказ
+    CarrierA --> AdapterA : rejected
+    AdapterA --> Orchestrator : failure
+
+    Orchestrator -> DB : DeliveryAttempt #1 -> FAILED
+
+    Orchestrator -> Orchestrator : find alternative Carrier / DeliveryOffer
+
+    alt Условия не изменились и deliveryType=COURIER
+        Orchestrator -> DB : create DeliveryAttempt #2\nCarrier B, status=PENDING
+
+        Orchestrator -> AdapterB : createDelivery(...)
+        AdapterB -> CarrierB : POST create delivery
+
+        CarrierB --> AdapterB : success + carrierDeliveryId
+        AdapterB --> Orchestrator : success
+
+        Orchestrator -> DB : DeliveryAttempt #2 -> ACCEPTED
+        Orchestrator -> DB : update Delivery -> ACCEPTED
+
+    else Требуется подтверждение новых условий
+        Orchestrator -> DB : save alternative DeliveryOffer
+
+        Orchestrator -> DB : insert DeliveryAlternativeApprovalRequired\ninto Outbox
+
+        DB --> Kafka : DeliveryAlternativeApprovalRequired\n(alternativeOfferId)
+
+        Kafka --> Order : DeliveryAlternativeApprovalRequired
+
+        Order -> UI : показать новые условия
+        UI -> User : цена / ETA / ПВЗ
+
+        alt Пользователь подтвердил
+            User --> UI : Подтвердить
+            UI --> Order : approved
+
+            Order -> Kafka : DeliveryAlternativeApproved\n(alternativeOfferId)
+
+            Kafka --> Orchestrator : DeliveryAlternativeApproved
+
+            Orchestrator -> DB : update Delivery with new offer
+            Orchestrator -> DB : create ALTERNATIVE job
+
+            Worker -> DB : take ALTERNATIVE job
+            Worker -> Orchestrator : process alternative delivery
+
+            Orchestrator -> DB : create DeliveryAttempt #2\nCarrier B, status=PENDING
+
+            Orchestrator -> AdapterB : createDelivery(...)
+            AdapterB -> CarrierB : POST create delivery
+
+            CarrierB --> AdapterB : success + carrierDeliveryId
+            AdapterB --> Orchestrator : success
+
+            Orchestrator -> DB : DeliveryAttempt #2 -> ACCEPTED
+            Orchestrator -> DB : Delivery -> ACCEPTED
+
+        else Пользователь отказался
+            User --> UI : Отказаться
+            UI --> Order : rejected
+
+            Order -> Kafka : DeliveryAlternativeRejected
+
+            Kafka --> Orchestrator : DeliveryAlternativeRejected
+
+            Orchestrator -> DB : stop alternative processing
+        end
+    end
+
+else TIMEOUT / результат неизвестен
+    CarrierA --> AdapterA : timeout
+    AdapterA --> Orchestrator : timeout
+
+    Orchestrator -> DB : keep DeliveryAttempt #1 = PENDING
+
+    Orchestrator -> Orchestrator : reconciliation
+
+    alt Подтверждено, что доставка создана
+        Orchestrator -> DB : DeliveryAttempt #1 -> ACCEPTED
+        Orchestrator -> DB : Delivery -> ACCEPTED
+
+    else Подтверждено, что доставка не создана
+        Orchestrator -> DB : DeliveryAttempt #1 -> FAILED
+        note right of Orchestrator
+        Только после этого можно
+        выбирать другого Carrier
+        end note
+
+    else Результат остаётся неизвестен
+        Orchestrator -> DB : job -> BLOCKED
+    end
+end
+
+@enduml
