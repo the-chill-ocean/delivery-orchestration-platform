@@ -4,6 +4,23 @@
 
 **Статус:** архитектурное проектирование завершено.
 
+## Быстрая навигация
+
+| Раздел | Содержание |
+|---|---|
+| [Описание проекта](docs/01-project-brief.md) | Цель, scope, ограничения и основные сценарии |
+| [Жизненный цикл Delivery](docs/02-delivery-lifecycle.md) | Статусы и переходы доставки |
+| [Доменная модель](docs/03-domain-model.md) | Order, Shipment, DeliveryOffer, Delivery, DeliveryAttempt |
+| [Модель данных](docs/04-data-model.md) | ERD и основные сущности БД |
+| [API](docs/05-api.md) | REST API и контракты |
+| [События](docs/06-events.md) | Kafka events и асинхронные взаимодействия |
+| [Надёжность](docs/07-reliability.md) | Idempotency, retries, Outbox, DLQ, reconciliation |
+| [NFR](docs/08-nfr.md) | Производительность, доступность, безопасность и мониторинг |
+| [System Design](docs/09-system-design.md) | Архитектура и ключевые технические решения |
+| [Диаграммы](#диаграммы) | C4, UML и BPMN |
+| [OpenAPI](openapi/delivery-orchestration-api.yaml) | Формальная спецификация API |
+| [Swagger UI](https://the-chill-ocean.github.io/delivery-orchestration-platform/swagger/) | Интерактивный просмотр API |
+
 Проект посвящён проектированию платформы, которая объединяет несколько служб доставки и предоставляет внутренним системам маркетплейса единый интерфейс для расчёта, оформления и отслеживания доставки.
 
 Результат проекта — комплект аналитической и архитектурной документации. Программная реализация не входит в текущий объём.
