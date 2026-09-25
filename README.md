@@ -114,7 +114,6 @@ flowchart TB
 | [08. Нефункциональные требования](docs/08-nfr.md) | Производительность, доступность, безопасность и мониторинг |
 | [09. System Design](docs/09-system-design.md) | Итоговая архитектура и основные проектные решения |
 | [OpenAPI specification](openapi/delivery-orchestration-api.yaml) | Формальная спецификация REST API платформы в формате OpenAPI 3.0 |
-| [Создание Delivery после OrderReadyForDelivery](diagrams/uml/01-delivery-creation-sequence.svg)
 
 ## 8. Нефункциональные требования
 
@@ -148,3 +147,14 @@ REST API платформы формализован в OpenAPI 3.0.
 - [Открыть Swagger UI](https://the-chill-ocean.github.io/delivery-orchestration-platform/swagger/)
 - [OpenAPI YAML](openapi/delivery-orchestration-api.yaml)
 - [Описание REST API](docs/05-api.md)
+
+## 12. Диаграммы
+В проекте подготовлены UML- и BPMN-диаграммы для основных сценариев платформы.
+
+| Диаграмма | Назначение | Исходник |
+|---|---|---|
+| [Создание Delivery](diagrams/uml/01-delivery-creation-sequence.svg) | UML Sequence: обработка `OrderReadyForDelivery` и оформление у Carrier | [PlantUML](diagrams/uml/01-delivery-creation-sequence.puml) |
+| [Переключение Carrier](diagrams/uml/02-carrier-switch-sequence.svg) | UML Sequence: отказ Carrier и согласование альтернативы | [PlantUML](diagrams/uml/02-carrier-switch-sequence.puml) |
+| [Конкурентная отмена](diagrams/uml/03-cancellation-race-sequence.svg) | UML Sequence: race condition при отмене | [PlantUML](diagrams/uml/03-cancellation-race-sequence.puml) |
+| [Жизненный цикл Delivery](diagrams/uml/04-delivery-state-machine.svg) | UML State Machine: состояния и переходы Delivery | [PlantUML](diagrams/uml/04-delivery-state-machine.puml) |
+| [End-to-end доставка](diagrams/bpmn/01-delivery-process.svg) | BPMN: полный бизнес-процесс доставки | [BPMN](diagrams/bpmn/01-delivery-process.bpmn) |
