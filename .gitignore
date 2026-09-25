@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# PlantUML / diagram temp files
+*.png~
+*.svg~
+*.puml~
+
+# Backup files
+*~
+*.bak
