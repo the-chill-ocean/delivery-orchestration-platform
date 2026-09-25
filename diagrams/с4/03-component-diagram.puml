@@ -1,0 +1,56 @@
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title C4 Level 3 — Component Diagram\nDelivery Orchestration Service
+
+Container(api, "Delivery API", "REST API", "Принимает синхронные запросы")
+Container(consumer, "Kafka Consumer", "Event Consumer", "Получает события Order Service")
+Container(worker, "Delivery Job Worker", "Background Worker", "Запускает INITIAL и ALTERNATIVE jobs")
+Container(reconciliation, "Reconciliation Worker", "Background Worker", "Разбирает неопределённые результаты операций")
+
+ContainerDb(db, "Delivery Database", "PostgreSQL", "Delivery, DeliveryOffer, DeliveryAttempt, Shipment snapshot, jobs, outbox")
+
+System_Ext(carriers, "Carrier Systems", "Внешние службы доставки")
+
+Container_Boundary(orchestrationService, "Delivery Orchestration Service") {
+
+    Component(deliveryService, "Delivery Service", "Application Component", "Координирует основные use cases Delivery")
+
+    Component(offerValidator, "Delivery Offer Validator", "Domain Component", "Проверяет актуальность и применимость DeliveryOffer")
+
+    Component(carrierSelector, "Carrier Selector", "Domain Component", "Выбирает подходящего Carrier с учётом условий доставки")
+
+    Component(attemptManager, "Delivery Attempt Manager", "Domain Component", "Создаёт и обновляет DeliveryAttempt")
+
+    Component(stateMachine, "Delivery State Machine", "Domain Component", "Проверяет допустимые переходы между статусами Delivery")
+
+    Component(alternativeService, "Alternative Delivery Service", "Domain Component", "Обрабатывает альтернативные Carrier и необходимость согласования новых условий")
+
+    Component(carrierGateway, "Carrier Gateway", "Integration Component", "Изолирует доменную логику от API конкретных Carrier")
+}
+
+Rel(api, deliveryService, "Cancel / Return / Delivery operations")
+Rel(consumer, deliveryService, "OrderReadyForDelivery и события альтернатив")
+Rel(worker, deliveryService, "Запускает создание доставки")
+Rel(reconciliation, deliveryService, "Передаёт подтверждённый результат reconciliation")
+
+Rel(deliveryService, offerValidator, "Проверяет DeliveryOffer")
+Rel(deliveryService, carrierSelector, "Запрашивает выбор Carrier")
+Rel(deliveryService, attemptManager, "Управляет попытками")
+Rel(deliveryService, stateMachine, "Проверяет переходы состояний")
+Rel(deliveryService, alternativeService, "Обрабатывает альтернативные условия")
+
+Rel(carrierSelector, alternativeService, "Передаёт найденные альтернативы")
+
+Rel(attemptManager, carrierGateway, "Создание / отмена / возврат")
+Rel(carrierGateway, carriers, "Carrier-specific API calls", "HTTPS")
+
+Rel(deliveryService, db, "Delivery / Shipment / Offer")
+Rel(offerValidator, db, "DeliveryOffer / Shipment snapshot")
+Rel(attemptManager, db, "DeliveryAttempt")
+Rel(alternativeService, db, "Alternative DeliveryOffer / Delivery")
+Rel(stateMachine, db, "Текущее состояние Delivery")
+
+SHOW_LEGEND()
+
+@enduml
