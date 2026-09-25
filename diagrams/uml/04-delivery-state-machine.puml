@@ -1,0 +1,62 @@
+@startuml
+title Жизненный цикл Delivery
+
+[*] --> CREATED
+
+CREATED --> ACCEPTED : Carrier подтвердил создание
+CREATED --> CANCELLED : Отмена до передачи Carrier
+
+ACCEPTED --> PICKED_UP : Shipment передан Carrier
+ACCEPTED --> CANCELLED : Carrier подтвердил отмену
+
+PICKED_UP --> IN_TRANSIT : Началась транспортировка
+PICKED_UP --> RETURN_IN_PROGRESS : Инициирован возврат
+
+IN_TRANSIT --> OUT_FOR_DELIVERY : Передано курьеру
+IN_TRANSIT --> READY_FOR_PICKUP : Доставлено в ПВЗ
+IN_TRANSIT --> RETURN_IN_PROGRESS : Инициирован возврат
+
+OUT_FOR_DELIVERY --> DELIVERED : Передано получателю
+OUT_FOR_DELIVERY --> DELIVERY_FAILED : Неудачная попытка доставки
+
+DELIVERY_FAILED --> OUT_FOR_DELIVERY : Повторная курьерская попытка
+DELIVERY_FAILED --> IN_TRANSIT : Перенаправление в ПВЗ
+DELIVERY_FAILED --> RETURN_IN_PROGRESS : Продолжение доставки невозможно
+
+READY_FOR_PICKUP --> DELIVERED : Получено пользователем
+READY_FOR_PICKUP --> RETURN_IN_PROGRESS : Истёк срок хранения
+READY_FOR_PICKUP --> RETURN_IN_PROGRESS : Пользователь инициировал возврат
+
+RETURN_IN_PROGRESS --> RETURNED : Shipment возвращён
+
+CANCELLED --> [*]
+DELIVERED --> [*]
+RETURNED --> [*]
+
+note right of CREATED
+Delivery создана внутри платформы.
+
+Это ещё не означает,
+что Carrier принял доставку.
+end note
+
+note right of DELIVERY_FAILED
+Не является терминальным статусом.
+
+После неудачной попытки
+возможны retry, ПВЗ или возврат.
+end note
+
+note right of CANCELLED
+Терминальный статус.
+end note
+
+note right of DELIVERED
+Терминальный статус.
+end note
+
+note right of RETURNED
+Терминальный статус.
+end note
+
+@enduml
