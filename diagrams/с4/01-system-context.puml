@@ -1,0 +1,36 @@
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title C4 Level 1 — System Context\nDelivery Orchestration Platform
+
+Person(user, "Пользователь", "Выбирает способ доставки и получает заказ")
+
+System_Ext(marketplace, "Marketplace / Checkout", "Оформление заказа и выбор условий доставки")
+
+System_Ext(orderService, "Order Service", "Управляет заказом и координирует его жизненный цикл")
+
+System_Ext(paymentService, "Payment Service", "Обрабатывает оплату и возврат средств")
+
+System(dop, "Delivery Orchestration Platform", "Рассчитывает варианты доставки, управляет Delivery и взаимодействием с Carrier")
+
+System_Ext(carriers, "Carrier Systems", "Внешние службы доставки")
+
+Rel(user, marketplace, "Оформляет заказ,\nвыбирает доставку")
+
+Rel(marketplace, dop, "Рассчитывает и проверяет\nDeliveryOffer", "REST/HTTPS")
+
+Rel(marketplace, orderService, "Создаёт и обновляет заказ", "REST/HTTPS")
+
+Rel(orderService, paymentService, "Инициирует оплату,\nвозврат средств")
+
+Rel(orderService, dop, "OrderReadyForDelivery,\nDeliveryAlternativeApproved / Rejected", "Kafka")
+
+Rel(dop, orderService, "DeliveryCreated,\nDeliveryStatusChanged,\nDeliveryAlternativeApprovalRequired", "Kafka")
+
+Rel(dop, carriers, "Создание, отмена,\nвозврат доставки", "HTTPS")
+
+Rel(carriers, dop, "Статусы доставки", "Webhook / Polling")
+
+SHOW_LEGEND()
+
+@enduml
