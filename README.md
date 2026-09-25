@@ -149,12 +149,16 @@ REST API платформы формализован в OpenAPI 3.0.
 - [Описание REST API](docs/05-api.md)
 
 ## 12. Диаграммы
-В проекте подготовлены UML- и BPMN-диаграммы для основных сценариев платформы.
 
-| Диаграмма | Назначение | Исходник |
+Архитектура и ключевые сценарии платформы представлены на нескольких уровнях детализации.
+
+| Диаграмма | Что показывает | Исходник |
 |---|---|---|
-| [Создание Delivery](diagrams/uml/01-delivery-creation-sequence.svg) | UML Sequence: обработка `OrderReadyForDelivery` и оформление у Carrier | [PlantUML](diagrams/uml/01-delivery-creation-sequence.puml) |
-| [Переключение Carrier](diagrams/uml/02-carrier-switch-sequence.svg) | UML Sequence: отказ Carrier и согласование альтернативы | [PlantUML](diagrams/uml/02-carrier-switch-sequence.puml) |
-| [Конкурентная отмена](diagrams/uml/03-cancellation-race-sequence.svg) | UML Sequence: race condition при отмене | [PlantUML](diagrams/uml/03-cancellation-race-sequence.puml) |
-| [Жизненный цикл Delivery](diagrams/uml/04-delivery-state-machine.svg) | UML State Machine: состояния и переходы Delivery | [PlantUML](diagrams/uml/04-delivery-state-machine.puml) |
-| [End-to-end доставка](diagrams/bpmn/01-delivery-process.svg) | BPMN: полный бизнес-процесс доставки | [BPMN](diagrams/bpmn/01-delivery-process.bpmn) |
+| [C4 Level 1 — System Context](diagrams/c4/01-system-context.svg) | Границы системы и внешние взаимодействия | [PlantUML](diagrams/c4/01-system-context.puml) |
+| [C4 Level 2 — Container](diagrams/c4/02-container-diagram.svg) | Внутреннюю структуру DOP | [PlantUML](diagrams/c4/02-container-diagram.puml) |
+| [C4 Level 3 — Component](diagrams/c4/03-component-diagram.svg) | Компоненты Delivery Orchestration Service | [PlantUML](diagrams/c4/03-component-diagram.puml) |
+| [BPMN — End-to-end delivery](diagrams/bpmn/01-delivery-process.svg) | Полный процесс доставки | [BPMN](diagrams/bpmn/01-delivery-process.bpmn) |
+| [Sequence — создание Delivery](diagrams/uml/01-delivery-creation-sequence.svg) | `OrderReadyForDelivery` → создание Delivery → Carrier | [PlantUML](diagrams/uml/01-delivery-creation-sequence.puml) |
+| [Sequence — переключение Carrier](diagrams/uml/02-carrier-switch-sequence.svg) | Отказ Carrier и согласование альтернативы | [PlantUML](diagrams/uml/02-carrier-switch-sequence.puml) |
+| [Sequence — конкурентная отмена](diagrams/uml/03-cancellation-race-sequence.svg) | Race condition при отмене Delivery | [PlantUML](diagrams/uml/03-cancellation-race-sequence.puml) |
+| [State Machine — Delivery](diagrams/uml/04-delivery-state-machine.svg) | Статусы и переходы Delivery | [PlantUML](diagrams/uml/04-delivery-state-machine.puml) |
