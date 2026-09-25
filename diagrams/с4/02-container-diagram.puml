@@ -12,47 +12,42 @@ System_Ext(carriers, "Carrier Systems", "Внешние службы доста�
 
 System_Boundary(dop, "Delivery Orchestration Platform") {
 
-    Container(api, "Delivery API", "REST API", 
-        "Расчёт DeliveryOffer, validate, получение Delivery, отмена и возврат")
+    Container(api, "Delivery API", "REST API", "Расчёт DeliveryOffer, validate, получение Delivery, отмена и возврат")
 
-    Container(consumer, "Kafka Consumer", "Event Consumer",
-        "Обрабатывает OrderReadyForDelivery и события согласования альтернатив")
+    Container(consumer, "Kafka Consumer", "Event Consumer", "Обрабатывает OrderReadyForDelivery и события согласования альтернатив")
 
-    Container(orchestrator, "Delivery Orchestration Service", "Application / Domain Service",
-        "Бизнес-логика Delivery, выбор Carrier, переходы состояний и обработка альтернатив")
+    Container(orchestrator, "Delivery Orchestration Service", "Application / Domain Service", "Бизнес-логика Delivery, выбор Carrier, переходы состояний и обработка альтернатив")
 
-    Container(worker, "Delivery Job Worker", "Background Worker",
-        "Обрабатывает INITIAL и ALTERNATIVE delivery creation jobs")
+    Container(worker, "Delivery Job Worker", "Background Worker", "Обрабатывает INITIAL и ALTERNATIVE delivery creation jobs")
 
-    Container(reconciliation, "Reconciliation Worker", "Background Worker",
-        "Восстанавливает состояние после timeout и неопределённых результатов Carrier")
+    Container(reconciliation, "Reconciliation Worker", "Background Worker", "Восстанавливает состояние после timeout и неопределённых результатов Carrier")
 
-    Container(outboxPublisher, "Outbox Publisher", "Background Worker",
-        "Публикует доменные события из Transactional Outbox")
+    Container(outboxPublisher, "Outbox Publisher", "Background Worker", "Публикует доменные события из Transactional Outbox")
 
-    ContainerDb(db, "Delivery Database", "PostgreSQL",
-        "Shipment snapshot, DeliveryOffer, Delivery, DeliveryAttempt, processed_events, outbox, delivery_creation_jobs")
+    ContainerDb(db, "Delivery Database", "PostgreSQL", "Shipment snapshot, DeliveryOffer, Delivery, DeliveryAttempt, processed_events, outbox, delivery_creation_jobs")
 
-    ContainerQueue(kafka, "Kafka", "Message Broker",
-        "Асинхронные события между DOP и Order Service")
+    ContainerQueue(kafka, "Kafka", "Message Broker", "Асинхронные события между DOP и Order Service")
 }
 
 Rel(user, marketplace, "Оформляет заказ")
-Rel(marketplace, api, "DeliveryOffer / validate", "REST/HTTPS")
 
+Rel(marketplace, api, "DeliveryOffer / validate", "REST/HTTPS")
 Rel(marketplace, orderService, "Создание и изменение заказа", "REST/HTTPS")
+
 Rel(orderService, paymentService, "Оплата / возврат")
 
-Rel(orderService, kafka, "OrderReadyForDelivery,\nDeliveryAlternativeApproved / Rejected")
-Rel(kafka, consumer, "Доставляет события")
+Rel(orderService, kafka, "OrderReadyForDelivery,\nDeliveryAlternativeApproved / Rejected", "Kafka")
 
-Rel(consumer, orchestrator, "Передаёт обработанное событие")
+Rel(kafka, consumer, "Доставляет события", "Kafka")
+
+Rel(consumer, orchestrator, "Передаёт событие для обработки")
 Rel(consumer, db, "processed_events,\nDelivery, Outbox, Job")
 
 Rel(api, orchestrator, "Выполняет use cases")
 Rel(api, db, "Читает / изменяет данные")
 
 Rel(orchestrator, db, "Delivery / Offer / Attempt / Job")
+
 Rel(worker, db, "Lease и обработка delivery_creation_jobs")
 Rel(worker, orchestrator, "Запускает orchestration flow")
 
@@ -64,9 +59,9 @@ Rel(reconciliation, carriers, "Проверяет фактическое сос�
 Rel(reconciliation, orchestrator, "Обновляет подтверждённое состояние")
 
 Rel(outboxPublisher, db, "Читает Outbox")
-Rel(outboxPublisher, kafka, "DeliveryCreated,\nDeliveryStatusChanged,\nDeliveryAlternativeApprovalRequired")
+Rel(outboxPublisher, kafka, "DeliveryCreated,\nDeliveryStatusChanged,\nDeliveryAlternativeApprovalRequired", "Kafka")
 
-Rel(kafka, orderService, "Доменные события DOP")
+Rel(kafka, orderService, "Доменные события DOP", "Kafka")
 
 SHOW_LEGEND()
 
