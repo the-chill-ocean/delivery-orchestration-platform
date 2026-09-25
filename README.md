@@ -114,6 +114,7 @@ flowchart TB
 | [08. Нефункциональные требования](docs/08-nfr.md) | Производительность, доступность, безопасность и мониторинг |
 | [09. System Design](docs/09-system-design.md) | Итоговая архитектура и основные проектные решения |
 | [OpenAPI specification](openapi/delivery-orchestration-api.yaml) | Формальная спецификация REST API платформы в формате OpenAPI 3.0 |
+| [Создание Delivery после OrderReadyForDelivery](diagrams/uml/01-delivery-creation-sequence.svg)
 
 ## 8. Нефункциональные требования
 
