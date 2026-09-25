@@ -108,12 +108,9 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
         '500':
-          description: Непредвиденная внутренняя ошибка платформы.
+          $ref: '#/components/responses/InternalError'
         '503':
-          description: |
-            Расчёт временно невозможно выполнить из-за недоступности
-            критичных внешних зависимостей. Не используется для ситуации,
-            когда расчёт выполнен успешно, но offers пуст.
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /delivery-offers/{offerId}/validate:
     post:
@@ -173,10 +170,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/DeliveryOfferNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
         '503':
-          description: |
-            Платформа не смогла выполнить проверку из-за временной
-            недоступности критичных внешних зависимостей.
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /deliveries/{deliveryId}:
     get:
@@ -237,7 +236,7 @@ paths:
         '404':
           $ref: '#/components/responses/DeliveryNotFound'
         '500':
-          description: Непредвиденная внутренняя ошибка платформы.
+          $ref: '#/components/responses/InternalError'
 
   /deliveries/{deliveryId}/cancel:
     post:
@@ -291,7 +290,7 @@ paths:
                 message: Delivery cannot be cancelled in the current status
                 currentStatus: PICKED_UP
         '500':
-          description: Непредвиденная внутренняя ошибка платформы.
+          $ref: '#/components/responses/InternalError'
         '503':
           description: Результат отмены у Carrier не удалось подтвердить.
           content:
@@ -354,7 +353,7 @@ paths:
                 message: Return cannot be started in the current status
                 currentStatus: DELIVERED
         '500':
-          description: Непредвиденная внутренняя ошибка платформы.
+          $ref: '#/components/responses/InternalError'
 
 components:
   securitySchemes:
@@ -432,6 +431,36 @@ components:
           example:
             code: DELIVERY_NOT_FOUND
             message: Delivery not found
+
+    DeliveryOfferNotFound:
+      description: DeliveryOffer с указанным offerId не найден.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: DELIVERY_OFFER_NOT_FOUND
+            message: DeliveryOffer not found
+
+    InternalError:
+      description: Непредвиденная внутренняя ошибка платформы.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: INTERNAL_ERROR
+            message: Internal server error
+
+    ServiceUnavailable:
+      description: Сервис временно не может выполнить операцию.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: SERVICE_UNAVAILABLE
+            message: Service temporarily unavailable
 
   schemas:
     CalculateDeliveryOffersRequest:
@@ -513,14 +542,20 @@ components:
         length:
           type: number
           format: double
+          minimum: 0
+          exclusiveMinimum: true
           example: 40
         width:
           type: number
           format: double
+          minimum: 0
+          exclusiveMinimum: true
           example: 30
         height:
           type: number
           format: double
+          minimum: 0
+          exclusiveMinimum: true
           example: 20
         unit:
           type: string
@@ -536,6 +571,7 @@ components:
         amount:
           type: number
           format: double
+          minimum: 0
           example: 450
         currency:
           type: string
