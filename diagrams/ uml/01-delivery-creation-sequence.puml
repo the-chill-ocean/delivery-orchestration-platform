@@ -1,0 +1,84 @@
+@startuml
+title Создание Delivery после OrderReadyForDelivery
+
+actor "Order Service" as Order
+queue Kafka
+participant "OrderReady Consumer" as Consumer
+database "Delivery DB" as DB
+participant "Outbox Publisher" as Outbox
+participant "Delivery Job Worker" as Worker
+participant "Carrier Orchestrator" as Orchestrator
+participant "Carrier Adapter" as Adapter
+participant "Carrier API" as Carrier
+
+Order -> Kafka : OrderReadyForDelivery\n(orderId, shipmentId,\ndeliveryOfferId, offerConfirmedAt)
+
+Kafka -> Consumer : OrderReadyForDelivery
+
+activate Consumer
+
+Consumer -> DB : BEGIN TRANSACTION
+
+Consumer -> DB : register eventId\nin processed_events
+
+Consumer -> DB : find Shipment snapshot\nby shipmentId
+
+Consumer -> DB : find DeliveryOffer\nby deliveryOfferId
+
+Consumer -> Consumer : validate:\n- offer belongs to shipment\n- offerConfirmedAt <= validUntil
+
+Consumer -> DB : create Delivery\nstatus = CREATED
+
+Consumer -> DB : insert DeliveryCreated\ninto Outbox
+
+Consumer -> DB : create delivery_creation_job\njobType = INITIAL\nstatus = PENDING
+
+Consumer -> DB : COMMIT
+
+Consumer -> Kafka : acknowledge message
+
+deactivate Consumer
+
+note right of DB
+DeliveryCreated означает,
+что внутренняя Delivery создана.
+
+Это не означает, что Carrier
+уже принял доставку.
+end note
+
+par Публикация события
+    Outbox -> DB : read unpublished Outbox events
+    DB --> Outbox : DeliveryCreated
+
+    Outbox -> Kafka : DeliveryCreated
+    Outbox -> DB : mark event as published
+else Оформление у Carrier
+    Worker -> DB : acquire PENDING job\nset IN_PROGRESS + leaseUntil
+
+    DB --> Worker : Delivery + DeliveryOffer\n+ Shipment snapshot
+
+    Worker -> Orchestrator : start delivery creation
+
+    Orchestrator -> Orchestrator : select suitable Carrier
+
+    Orchestrator -> DB : create DeliveryAttempt\nstatus = PENDING\ncarrierId\ndeliveryOfferId
+
+    Orchestrator -> Adapter : createDelivery(...)
+
+    Adapter -> Carrier : POST create delivery\nIdempotency-Key: deliveryAttemptId
+
+    Carrier --> Adapter : success + carrierDeliveryId
+
+    Adapter --> Orchestrator : carrierDeliveryId
+
+    Orchestrator -> DB : update DeliveryAttempt\nPENDING -> ACCEPTED\nsave carrierDeliveryId
+
+    Orchestrator -> DB : update Delivery\nCREATED -> ACCEPTED
+
+    Orchestrator -> DB : insert DeliveryStatusChanged\ninto Outbox
+
+    Worker -> DB : job status = COMPLETED
+end
+
+@enduml
